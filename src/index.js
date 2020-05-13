@@ -10,40 +10,68 @@ class Game extends React.Component {
             history: [
                 {squares: Array(9).fill(null)}
             ],
-            xIsNext: true
+            xIsNext: true,
+            atMove: 0 // which move of the game we're currently viewing
         }
     }
     handleClick(i) {
-        const history = this.state.history
-        const squares = history[history.length-1].squares.slice(); // returns a shallow copy?
+        var history = this.state.history;
+        const squares = history[this.state.atMove].squares.slice(); // returns a shallow copy?
 
         if (calculateWinner(squares) || squares[i]) {
             return;
         }
         squares[i] = this.state.xIsNext ? 'X' : 'O';
+        
+        history = history.slice(0, this.state.atMove+1);
         history.push({"squares": squares})
         // in React you can't change this.state directly:
-        this.setState({history: history, xIsNext: !this.state.xIsNext});
+        this.setState({
+            history: history,
+            xIsNext: !this.state.xIsNext,
+            atMove: this.state.atMove + 1 // which move in game we're currently at
+        });
+    }
+    jumpTo(moveNum) {
+        // only need to set the values that changed:
+        this.setState({
+            xIsNext: (moveNum % 2 === 0),
+            atMove: moveNum
+        });
     }
     render() {
-        const history = this.state.history
-        const squares = history[history.length-1].squares.slice();
-        const winner = calculateWinner(squares);
+        const history = this.state.history;
+        const current = history[this.state.atMove];
+        const winner = calculateWinner(current.squares);
         let status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
         if (winner) {
             status = "Winner: " + winner;
         }
+
+        // create array of move history html
+        const moves = history.map((state, index) => {
+            const desc = index !== 0 ? "Go to move #" + index : "Go to game start";
+            // keys are needed for list items to help react identify future changes
+            //   https://reactjs.org/tutorial/tutorial.html#picking-a-key
+            return (
+                <li key={index}>
+                    <button onClick={() => this.jumpTo(index)}>
+                        {desc}
+                    </button>
+                </li>
+            );
+        });
         return (
             <div className="game">
                 <div className="game-board">
                     <Board
                         onClick={(i) => this.handleClick(i)}
-                        squares={this.state.history[this.state.history.length-1].squares}
+                        squares={current.squares}
                     />
                 </div>
                 <div className="game-info">
                     <div>{status}</div>
-                    <ol>{/* TODO */}</ol>
+                    <ol>{moves}</ol>
                 </div>
             </div>
         );
