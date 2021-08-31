@@ -1,8 +1,14 @@
 // based on https://www.youtube.com/watch?v=KDn_j48yoAo
 fn main() {
+    learning();
+
+}
+
+fn learning() {
     // variables are immutable by default, unless marked with `mut`
     let x = 3 * -5;    // integer
-    let y = 2.1;       // float
+    let mut y = 2.1;       // float (declared as mutable)
+    y = -3.9;
 
     let boo = true; // boolean
 
@@ -12,6 +18,7 @@ fn main() {
 
     let my_tuple = (3, 4.1, "Dan"); // rust hates camel case
     println!("{}", my_tuple.0);
+    println!("my_tuple: {:?}", my_tuple);
     say_hello("Bob");
     add(11, -4);
 }
