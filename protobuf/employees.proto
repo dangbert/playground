@@ -1,0 +1,17 @@
+syntax = "proto3";
+// must declare which version of proto buf this file is for
+
+message Employee {
+  int32 id = 1;   // the number (1) defines the serialization sequence (index starts at 1)
+                  //(useful for compatability) as this file might evolve over time
+
+  string name = 2;
+  int32 salary = 3;
+
+}
+
+// protocol buffers are useful in that they can be converted to any language!
+message Employees {
+  // repeated makes it an array (like saying Employee[])
+  repeated Employee employees = 1;
+}

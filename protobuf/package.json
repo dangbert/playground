@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
-
   "scripts": {
-    "start": "node index.js"
+    "proto": "protoc --js_out=import_style=commonjs,binary:. employees.proto",
+    "start": "yarn proto && node index.js"
+  },
+  "dependencies": {
+    "google-protobuf": "^3.18.0-rc.2"
   }
 }
