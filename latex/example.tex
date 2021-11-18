@@ -1,0 +1,37 @@
+% hello world example
+% compile with: xelatex example.tex
+
+% you can also use 'book' if desired
+\documentclass{article}
+
+% lets you use the href command
+\usepackage{hyperref}
+
+\begin{document}
+
+This document is an \emph{example/notes} for learning \LaTeX (using \href{https://www.tug.org/twg/mactex/tutorials/ltxprimer-1.0.pdf}{this book} ).
+Continuing the text on this line (rather than above) makes no difference for the paragraph.
+
+The blank line above forces a new paragraph to start here.
+Having multiple         spaces between words doesn't make a difference (it's treated as one space).
+This symbol \ forces an extra space to be added!
+
+testing other languages: aquí, γεια σας (this doesn't work directly, at least without some greek font).
+
+
+\noindent This paragraph will start without an indent!
+% insert content from another file:
+\input{otherfile.tex}
+
+\begin{center}
+  Spacing:
+\end{center}
+
+\begin{flushright}
+  This is aligned to the right.
+\end{flushright}
+\begin{flushleft}
+  This is aligned to the left.
+\end{flushleft}
+
+\end{document}
