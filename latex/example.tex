@@ -15,6 +15,8 @@ Continuing the text on this line (rather than above) makes no difference for the
 The blank line above forces a new paragraph to start here.
 Having multiple         spaces between words doesn't make a difference (it's treated as one space).
 This symbol \ forces an extra space to be added!
+Use two backslashes to force\\
+a line breakpoint.
 
 testing other languages: aquí, γεια σας (this doesn't work directly, at least without some greek font).
 
@@ -24,7 +26,7 @@ testing other languages: aquí, γεια σας (this doesn't work directly, at 
 \input{otherfile.tex}
 
 \begin{center}
-  Spacing:
+  \section{Spacing:}
 \end{center}
 
 \begin{flushright}
@@ -33,5 +35,37 @@ testing other languages: aquí, γεια σας (this doesn't work directly, at 
 \begin{flushleft}
   This is aligned to the left.
 \end{flushleft}
+
+
+\section{Bullets}
+Use the \underline{itemize} \href{https://www.overleaf.com/learn/latex/Environments}{environment} with the \underline{item} command (see fonts section below for an example).
+
+
+\begin{center}
+  Fonts:
+\end{center}
+
+
+\begin{itemize}
+  \item A (font) type style is defined by \emph{family > series > shape}.
+  \begin{itemize}
+    \item \textsf{\textbf{this is: sans serif > boldface > upright (default)}}
+    \item \textrm{\textmd{\textit{this is: roman > medium > italic}}}
+    \item \textrm{\textmd{\textsl{this is: roman > medium > slanted}}}
+  \end{itemize}
+
+  \item The emph command is just a shorthand that will use the \emph{italic} or \emph{upright} shape as needed to be the opposite of it's surrounding text.
+  \item We \tiny{can} also \scriptsize{play around} with \huge{font size}.  normalsize will \normalsize{} change things back to normal.
+\end{itemize}
+
+
+\section{
+  \href{https://libguides.utsa.edu/c.php?g=522165&p=3570198}{The Document}
+}
+The document class uses the syntax documentclass[options]{class}, for example documentclass[11pt]{article}
+
+...
+
+
 
 \end{document}
