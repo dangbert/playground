@@ -66,6 +66,50 @@ The document class uses the syntax documentclass[options]{class}, for example do
 
 ...
 
+\section{
+  \href{https://www.overleaf.com/learn/latex/Commands}{Commands}
+}
 
+If a command has some optional parameters, they must be put in square brackets.
+\emph{(Required parameters are provided back to back each in their own set of braces.}
+
+
+Here the command created has 3 parameters, but when the first isn't provided it will default to -7.
+
+\newcommand{\plusbinomial}[3][-7]{(#2 + #3)^{#1}}
+
+This line uses the default value for param 1: \( \plusbinomial{x}{y} \)
+
+Here param 1 is explicity proviced as 4: \( \plusbinomial[4]{y}{y} \)
+
+
+\section{
+  \href{https://latex.wikia.org/wiki/Tabular_(LaTeX_environment)}{Tables (tabular)}
+}
+
+See also the \href{https://www.overleaf.com/learn/latex/Tables}{overleaf documenation}.
+
+The multicolumn command seems to be a way to tell a cell to span multiple columns (see \href{https://tex.stackexchange.com/a/131868}{this example}).
+More info \href{https://www.overleaf.com/learn/latex/Tables#Combining_rows_and_columns}{here as well}.
+
+
+Simple table, specifying whether to draw vertical lines around cells, and whether to center or left or right align each cell's contents:\\
+\begin{tabular}{ |c|lc| }
+  cell1 & cell2 says hi & cell3 \\
+  textwidth = \the\textwidth & cell5 & cell6 \\
+  cell7 & cell8 & cell9 says bye \\
+  \hline
+  \multicolumn{3}{||r||}{this cell spans 3 columns (right aligned)}
+\end{tabular}
+
+Note: you can use captions and labels if you wrap the \emph{tabular} environment with with \emph{table} environment.
+
+
+%\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} L{\textwidth - 4.5cm} R{4.5cm}}
+%\begin{tabular*}{300pt}{@{\extracolsep{\fill}}}
+% cell1 & cell2 says hi & cell3 \\
+% cell4 & cell5 & cell6 \\
+% cell7 & cell8 & cell9 says bye
+%\end{tabular*}%
 
 \end{document}
