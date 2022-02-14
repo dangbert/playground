@@ -1,4 +1,8 @@
+# About
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+
+This project is a simple learning exercise for practicing Next.js.  It's inspired by [this tutorial](https://www.youtube.com/watch?v=Sklc_fQBmcs).
 
 ## Getting Started
 
