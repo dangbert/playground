@@ -16,5 +16,7 @@ if input("\nDrop any existing tables? (y/n): " ).lower().strip() in ('y','yes'):
 
 print("\ncreating all tables")
 meta.create_all(engine)
+print("table list:")
+print(meta.sorted_tables)
 
 print("done!")

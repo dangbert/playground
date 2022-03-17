@@ -16,8 +16,9 @@ mapper_registry = registry()
 #   "the Base class refers to a registry object that maintains a collection of related mapped classes"
 #    https://docs.sqlalchemy.org/en/14/orm/mapping_styles.html#declarative-mapping
 
-Base = declarative_base()
-#Base = mapper_registry.generate_base() # (the above is shorthand for this)
+# this is supposed to function the same as below, BUT it doesn't (customer table doesn't get created)
+#Base = declarative_base()
+Base = mapper_registry.generate_base() # the above is (supposedly) shorthand for this
 
 # example mapping using the base class:
 class Customer(Base):
