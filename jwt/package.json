@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "devStart": "nodemon server.js",
+    "devStartAuth": "nodemon authServer.js",
     "test": "echo 'Error no test specified' && exit 1"
 
   },

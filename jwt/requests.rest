@@ -1,11 +1,29 @@
 GET http://localhost:3001/posts
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiS3lsZSIsImlhdCI6MTY0NzU1MzM1N30.3hVc9xYNvKXUzgiNuEIRT7g7DJhSPK5oqitc8uLj3Gg
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiS3lsZSIsImlhdCI6MTY0NzU1Njk4NywiZXhwIjoxNjQ3NTU3MDI3fQ.ah7OQte6_py8WFtX1cCBP2hPxe6jBkkY3hI7KHJ0R9A
 
 ###
 
-POST http://localhost:3001/login
+POST http://localhost:4001/login
 Content-Type: application/json
 
 {
   "username": "Kyle"
+}
+
+###
+
+POST http://localhost:4001/token
+Content-Type: application/json
+
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiS3lsZSIsImlhdCI6MTY0NzU1NzIwMn0.gyf6HLJUbREonMFHplb-NSUaeV49TXeVqmg3I01rK_c"
+}
+
+###
+
+DELETE http://localhost:4001/logout
+Content-Type: application/json
+
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiS3lsZSIsImlhdCI6MTY0NzU1NzIwMn0.gyf6HLJUbREonMFHplb-NSUaeV49TXeVqmg3I01rK_c"
 }

@@ -18,17 +18,6 @@ app.get('/posts', authenticateToken, (req, res) => {
   res.json(posts.filter(p => p.username == req.user.name));
 });
 
-app.post('/login', (req, res) => {
-  const username = req.body.username;
-  // TODO: we would authenticate user first here
-
-  // now assuming user has been authenticated:
-  const user = { name: username };
-  const accessToken = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
-  res.json({ accessToken });
-});
-
-
 // middleware, get user if provided token is valid
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -41,7 +30,7 @@ function authenticateToken(req, res, next) {
 
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
     // token is not valid (or expired)
-    if (err) return err.sendStatus(403);
+    if (err) return res.sendStatus(403);
 
     req.user = user;
     next();
