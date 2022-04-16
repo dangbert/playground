@@ -12,6 +12,7 @@ html {
   display: flex;
   flex-flow: row wrap;
   justify-content: space-between;
+  min-height: 100px;
 }
 
 .pictures > * {
@@ -21,7 +22,7 @@ html {
 
 .board {
   background-color: coral;
-
+  min-height: 100px;
 }
 
 .board > * {
