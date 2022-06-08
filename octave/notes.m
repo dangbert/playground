@@ -27,6 +27,18 @@ fprintf("inv(a) * s is the same as a\\s (note direction of slash)\n")
 inv(a) * s
 a\s
 
+fprintf("use zeros(3,3) to create a matrix of zeros\n.")
+fprintf("Use eye(n) to create an identity matrix.  eye(3)=\n");
+eye(3)
+
+fprintf("matrix indexing:\n")
+A = [1 2 3; 2 3 4; 3 4 5; 4 5 6]
+fprintf("A(:, 2:3) =\n")
+A(:, 2:3)
+fprintf("update entries of A meeting condition\n")
+A(A == 3) = 333
+ 
+
 
 fprintf("\n\n----------vectors:----------\n")
 fprintf("solving the matrix equation Ax = b\n")

@@ -1,0 +1,31 @@
+html {
+  background-color: lightblue;
+}
+
+.page, .board {
+  max-width: 1100px;
+  margin: auto;
+  background-color: lightcoral;
+}
+
+.pictures {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: space-between;
+  min-height: 100px;
+}
+
+.pictures > * {
+  width: 150px;
+  padding: 20px;
+}
+
+.board {
+  background-color: coral;
+  min-height: 100px;
+}
+
+.board > * {
+  width: 300px;
+  padding: 20px;
+}
