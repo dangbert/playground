@@ -13,7 +13,11 @@ import {
   useDimensions,
 } from '@react-native-community/hooks';
 
-export default function App() {
+/**
+ * Experiments with detecting phone orientation and screen size.
+ * Note: "orientation" must be set to "defualt" in app.json (to allow portrait and landscape).
+ */
+export default function Orientation() {
   // dimensions of screen (rotation independent)
   console.log(Dimensions.get('window'));
 

@@ -15,3 +15,4 @@ web-build/
 
 # custom:
 .vscode/.react/
+yarn-error.log
