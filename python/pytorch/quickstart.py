@@ -84,11 +84,20 @@ def main():
 
 # Define model
 class NeuralNetwork(nn.Module):
+    """
+    Every module in pytorch subclasses nn.Module
+    https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+
+    See also self.set_extra_state for handling (optional) extra state when calling load_state_dict()
+    """
+
     def __init__(self):
         super().__init__()
+        # the flatten layer converts each 28*28 image into "a contiguous array of 784 pixel values"
+        #   (see practice.ipynb for demo)
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
-            # input layer has 28*28=784 inputs, and
+            # input layer has 28*28=784 inputs, and 512 outputs
             nn.Linear(28 * 28, 512),
             nn.ReLU(),
             nn.Linear(512, 512),
@@ -97,6 +106,10 @@ class NeuralNetwork(nn.Module):
         )
 
     def forward(self, x):
+        """
+        Defines the forward computation at every call.
+        Note: This shouldn't be called directly.
+        """
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits
@@ -104,6 +117,7 @@ class NeuralNetwork(nn.Module):
 
 def train(dataloader, model: NeuralNetwork, loss_fn, optimizer):
     size = len(dataloader.dataset)
+    # place module in training mode (effect e.g. dropout depends on type of module)
     model.train()
     for batch, (X, y) in enumerate(dataloader):
         X, y = X.to(device), y.to(device)
@@ -125,7 +139,7 @@ def train(dataloader, model: NeuralNetwork, loss_fn, optimizer):
 def test(dataloader, model: NeuralNetwork, loss_fn):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
-    model.eval()
+    model.eval()  # set module in evaluation mode (same as model.train(False))
     test_loss, correct = 0, 0
     with torch.no_grad():
         for X, y in dataloader:
