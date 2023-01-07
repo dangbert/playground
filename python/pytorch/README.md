@@ -9,5 +9,5 @@ Experiments with learning pytorch.
 # install (with no GPU)
 pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
 
-pip3 install torchviz
+pip3 install torchviz matplotlib
 ````
