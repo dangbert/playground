@@ -94,14 +94,14 @@ N = length(plotVec);
 % Size gets you the size of things with multiple dimensions
 [numRows numCols] = size(randMat);
 
-for i=1:N
-  % Plot one point from a cosine curve using red x symbols
-  plot(plotVec(i),cos(plotVec(i)),'rx');
-  % Force drawing now
-  drawnow;
-  % Pause for 0.2 sec
-  pause(0.2);
-end
+%for i=1:N
+%  % Plot one point from a cosine curve using red x symbols
+%  plot(plotVec(i),cos(plotVec(i)),'rx');
+%  % Force drawing now
+%  drawnow;
+%  % Pause for 0.2 sec
+%  pause(0.2);
+%end
 
 legend('First curve (sine wave)','Second curve (cosine wave)');
 
