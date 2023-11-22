@@ -3,6 +3,8 @@
 # references:
 # https://github.com/ElliotGestrin/NAOChat/blob/3f0f4dfce49eed2803f80564f40c6ed3c96cb5b5/src/Listener.py
 # https://brunoscheufler.com/blog/2023-03-12-generating-subtitles-in-real-time-with-openai-whisper-and-pyaudio
+#
+# https://github.com/openai/whisper
 ################################################################################
 
 import os
@@ -16,7 +18,7 @@ import pyaudio
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-WAVE_BUFFER_FNAME = "buffer.wav"
+OUT_BUFFERS = ["buffer.wav", "tmp.wav"]
 
 
 def main():
@@ -73,18 +75,24 @@ def main():
     # rec.adjust_for_ambient_noise(mic)
 
     # LISTEN_DUR = 4
-    print("recording...", flush=True)
-    fname = record_audio(args.mic)
-    print("done!", flush=True)
+    while True:
+        full_buffer, tmp_buffer = OUT_BUFFERS
 
-    res = model.transcribe(fname)
-    print(f"\nlive transcription:")
-    print(res["text"])
+        print("\nrecording... ", end="", flush=True)
+        record_audio(args.mic, tmp_buffer)
+        print("done!", flush=True)
+
+        # append to old buffer
+        join_waves([full_buffer, tmp_buffer], full_buffer)
+
+        res = model.transcribe(full_buffer)
+        print(f"\nlive transcription:")
+        print(res["text"])
 
 
-def record_audio(device_index: int, dur_sec: int = 3):
+def record_audio(device_index: int, out_fname: str, dur_sec: int = 3) -> None:
     """
-    From https://brunoscheufler.com/blog/2023-03-12-generating-subtitles-in-real-time-with-openai-whisper-and-pyaudio
+    Inspired by https://brunoscheufler.com/blog/2023-03-12-generating-subtitles-in-real-time-with-openai-whisper-and-pyaudio
     """
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
@@ -103,7 +111,6 @@ def record_audio(device_index: int, dur_sec: int = 3):
     )
 
     frames = []
-
     for _ in range(0, int(RATE / CHUNK * dur_sec)):
         data = stream.read(CHUNK)
         frames.append(data)
@@ -112,13 +119,32 @@ def record_audio(device_index: int, dur_sec: int = 3):
     stream.close()
     audio.terminate()
 
-    waveFile = wave.open(WAVE_BUFFER_FNAME, "wb")
-    waveFile.setnchannels(CHANNELS)
-    waveFile.setsampwidth(audio.get_sample_size(FORMAT))
-    waveFile.setframerate(RATE)
-    waveFile.writeframes(b"".join(frames))
-    waveFile.close()
-    return WAVE_BUFFER_FNAME
+    with wave.open(out_fname, "wb") as waveFile:
+        waveFile.setnchannels(CHANNELS)
+        waveFile.setsampwidth(audio.get_sample_size(FORMAT))
+        waveFile.setframerate(RATE)
+        waveFile.writeframes(b"".join(frames))
+        waveFile.close()
+
+
+# TODO: support max length (trim beginning)
+def join_waves(fnames: list[str], out_fname: str):
+    # https://stackoverflow.com/a/2900266
+    data = []
+    for fname in fnames:
+        if not os.path.isfile(fname) or os.stat(fname).st_size == 0:
+            print(f"skipping empty or non-existent file {fname}")
+            continue
+        with wave.open(fname, "rb") as w:
+            data.append([w.getparams(), w.readframes(w.getnframes())])
+
+    if len(data) == 0:
+        print("no data to join!")
+        return
+    with wave.open(out_fname, "wb") as w:
+        w.setparams(data[0][0])
+        for i in range(len(data)):
+            w.writeframes(data[i][1])
 
 
 if __name__ == "__main__":
