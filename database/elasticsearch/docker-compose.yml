@@ -2,19 +2,41 @@ version: "3.7"
 name: es
 
 services:
-  elastic:
+  es01:
     # https://hub.docker.com/_/elasticsearch/
     image: elasticsearch:${ES_VERSION}
-    env_file: ./.env
+    # specifying a container name (e.g. es01 instead of es-es01-1)
+    container_name: es01
     ports:
       - ${ES_PORT}:9200
+      # note: 9300 is for inter-cluster communication (i.e. with nodes), but we don't have to expose
+    env_file: ./.env
+    environment:
+      # max heap size for java
+      ES_JAVA_OPTS: -Xmx512m -Xms512m
+      # configure as a single node cluster (tries to discover other nodes otherwise, but not a problem)
+      discovery.type: single-node
+      node.name: es01
+      cluster.name: elasticsearch
+      #logger.level: WARN
+      # for development, we don't need SSL
+      xpack.security.enabled: false
     volumes:
-      - ./volumes/elastic:/usr/share/elasticsearch/data
+      - ./volumes/es01:/usr/share/elasticsearch/data
 
   kibana:
+    container_name: kibana
     image: kibana:${ES_VERSION}
-    env_file: ./.env
     ports:
       - ${KIBANA_PORT}:5601
+      # 9600 is for node-monitoring API
+      #- 9600:9600
+    env_file: ./.env
+    environment:
+      - SERVERNAME=kibana
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+      # by settings these here, we don't have to log into the Kibana UI:
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
     depends_on:
-      - elastic
+      - es01
