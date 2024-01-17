@@ -8,11 +8,27 @@ cp .env.sample .env
 
 docker compose up -d
 
+# generate enrollment token for kibana:
+docker exec -it es-elastic-1 /usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana
+
+# watch logs (kibana will print verification code later)
+docker compose logs -f
+````
+
+
+Kibana setup:
+1. Visit kibana here http://localhost:5601/ (enter enrollment token, and watch kibana's logs to see the verification code).
+2. Login with user `elastic`, password (see `ELASTIC_PASSWORD` in .env file).
+
+Misc tricks:
+````bash
+# reset elastic user's password (if desired)
+#   (update ELASTIC_PASSWORD in .env file afterwards)
+docker exec -it es-elastic-1 /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic
+
 # get terminal inside elastic container
 docker exec -it es-elastic-1 bash
 ````
-
-Now you can visit kibana here http://localhost:5601/
 
 ## References
 * https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html

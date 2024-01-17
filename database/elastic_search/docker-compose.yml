@@ -8,6 +8,8 @@ services:
     env_file: ./.env
     ports:
       - ${ES_PORT}:9200
+    volumes:
+      - ./volumes/elastic:/usr/share/elasticsearch/data
 
   kibana:
     image: kibana:${ES_VERSION}
