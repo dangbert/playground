@@ -17,3 +17,5 @@ pip install openai-whisper
 whisper ./podcast.mp4 --model medium
 ````
 
+## See also 
+https://github.com/Vaibhavs10/insanely-fast-whisper
