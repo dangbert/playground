@@ -1,0 +1,4 @@
+langchain-community==0.0.13
+langchain-core==0.1.13
+langchain-openai==0.0.3
+python-dotenv==1.0.0
