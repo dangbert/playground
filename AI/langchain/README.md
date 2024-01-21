@@ -27,3 +27,6 @@ Note: using and older version of pydantic due to [this issue](https://github.com
 * FAISS (Facebook AI Similarity Search) [site/docs](https://faiss.ai/), [repo](https://ai.meta.com/tools/faiss/)
   * A library to quickly search for embeddings of multimedia documents that are similar to each other.
   * (Homepage lists interesting papers its based off of).
+
+### Ragger
+WIP tool for querying ChatGPT using local files as context.
