@@ -64,11 +64,14 @@ def main():
         args.device = utils.get_device()
     torch_dtype = torch.float32 if args.device == "cpu" else torch.float16
 
+    start_time = timer()
     # use from_pipe to avoid consuming additional memory when loading a checkpoint
     pipeline_text2image = AutoPipelineForText2Image.from_pretrained(
         "stabilityai/sdxl-turbo", torch_dtype=torch_dtype, variant="fp16"
     )
     pipeline = AutoPipelineForImage2Image.from_pipe(pipeline_text2image).to(args.device)
+    dur_secs = timer() - start_time
+    print(f"model loaded in {dur_secs:.3f} seconds")
 
     # init_image = load_image("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/cat.png")
     init_image = load_image(args.input)
@@ -78,6 +81,7 @@ def main():
     # prompt = "cat wizard, gandalf, lord of the rings, detailed, fantasy, cute, adorable, Pixar, Disney, 8k"
 
     for i in range(args.num_images):
+        start_time = timer()
         image = pipeline(
             args.prompt,
             image=init_image,
@@ -85,8 +89,10 @@ def main():
             guidance_scale=0.0,
             num_inference_steps=2,
         ).images[0]
-        make_image_grid([init_image, image], rows=1, cols=2)
+        dur_secs = timer() - start_time
+        print(f"\nimage {i+1} generated in {dur_secs:.3f} seconds")
 
+        # make_image_grid([init_image, image], rows=1, cols=2)
         if args.output:
             fname = args.output
             if args.num_images > 1:
