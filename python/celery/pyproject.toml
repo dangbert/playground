@@ -1,13 +1,15 @@
 [tool.poetry]
-name = "app"
+name = "src"
 version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
-readme = "../README.md"
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
 celery = "^5.3.6"
+redis = "^5.0.1"
+sqlalchemy = "^2.0.25"
 
 
 [tool.poetry.group.dev.dependencies]

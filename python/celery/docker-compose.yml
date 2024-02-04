@@ -2,14 +2,16 @@ version: "3.8"
 name: "celery"
 
 services:
-  app:
-    build:
-      context: ./src
-      dockerfile: ./Dockerfile
-    volumes:
-      #- ./src:/live
-      - ./src:/app
-    command: 'sleep infinity'
+  #app:
+  #  build:
+  #    context: ./src
+  #    dockerfile: ./Dockerfile
+  #  volumes:
+  #    #- ./src:/live
+  #    - ./src:/app
+  #  command: 'sleep infinity'
 
   redis:
     image: "redis:7-bookworm"
+    ports:
+      - "6380:6379"

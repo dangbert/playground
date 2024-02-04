@@ -1,10 +1,11 @@
-from .celery_setup import capp
+from src.celery import app
 
-@capp.task
+
+@app.task
 def add(x, y):
     return x + y
 
 
-@capp.task
+@app.task
 def xsum(numbers):
     return sum(numbers)
