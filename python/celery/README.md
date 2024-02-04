@@ -2,6 +2,8 @@
 
 References:
 * https://docs.celeryq.dev/en/stable/getting-started/first-steps-with-celery.html9
+* https://docs.celeryq.dev/en/stable/getting-started/next-steps.html
+* https://docs.celeryq.dev/en/stable/userguide/index.html
 
 ## Setup / Usage
 ````bash
@@ -14,7 +16,17 @@ poetry install
 poetry shell
 
 # run celery (looks at tasks.py:app object)
+#   https://docs.celeryq.dev/en/stable/getting-started/next-steps.html#about-the-app-argument
+cd src
 celery -A tasks worker --loglevel=INFO
+
+# now leaving our background worker running
+# enter a new terminal and start some example tasks:
+poetry shell
+./example_work.py
+
+# see running nodes:
+celery -A tasks inspect active
 
 # view redis if desired
 redis-cli -p 6380
