@@ -10,13 +10,13 @@ def main():
     res = tasks.add.delay(random.randint(1, 100), random.randint(1, 100))
     describe(res)
 
-    res.get(timeout=2)
+    res.get(timeout=10)
     describe(res)
 
     num_list = [random.randint(1, 100000) for _ in range(10)]
     res = tasks.xsum.delay(num_list)
     describe(res)
-    res.get(timeout=4)
+    res.get(timeout=30)
 
     describe(res)
 
@@ -26,6 +26,9 @@ def main():
     res2 = lookup(res.id)
     print(f"looked up task with result {type(res2.result)}:\n", res2.result)
 
+    # raw = lookup_raw(res.id)
+    # print(raw)
+
 
 def lookup(task_id: str):
     """Fetch a result from the backend (sqlite) by task_id."""
@@ -33,6 +36,26 @@ def lookup(task_id: str):
 
     res = AsyncResult(task_id, app=app)
     return res
+
+
+def lookup_raw(task_id: str):
+    # here we do our own query as an example of using celery's ORM models directly
+    from celery.backends.database import models as celery_models
+    from sqlalchemy.orm import Session
+    from src.get_celery import app
+
+    # create SQLAlchemy session against backend URI
+    # TODO: this doesn't work:
+    # see instead http://www.prschmid.com/2013/04/using-sqlalchemy-with-celery-tasks.html
+    session = Session(bind=app.backend.engine)
+
+    # Use the session for database operations with Celery's models
+    result = (
+        session.query(celery_models.TaskResult)
+        .filter_by(task_id="your_task_id")
+        .first()
+    )
+    return result
 
 
 def describe(res: AsyncResult):

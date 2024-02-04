@@ -14,18 +14,14 @@ docker compose up -d
 
 pip install poetry
 poetry install
-# enter virtual environment
-poetry shell
 
 # run celery (looks at tasks.py:app object)
 #   https://docs.celeryq.dev/en/stable/getting-started/next-steps.html#about-the-app-argument
 cd src
-celery -A tasks worker --loglevel=INFO
+poetry run celery -A tasks worker --loglevel=INFO
 
-# now leaving our background worker running
-# enter a new terminal and start some example tasks:
-poetry shell
-./example_work.py
+# now leaving our background worker running in another terminal:
+poetry run ./example_work.py
 
 # see running nodes:
 celery -A tasks inspect active
