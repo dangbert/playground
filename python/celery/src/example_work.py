@@ -2,6 +2,8 @@
 import src.tasks as tasks
 import random
 
+from celery.result import AsyncResult
+
 
 def main():
     # https://docs.celeryq.dev/en/stable/getting-started/next-steps.html#calling-tasks
@@ -15,13 +17,28 @@ def main():
     res = tasks.xsum.delay(num_list)
     describe(res)
     res.get(timeout=4)
+
     describe(res)
-    breakpoint()
+
+    res = tasks.reverse.delay(num_list)
+    res.get()  # wait for result
+    # celery will actually get the result from the database as the native type it was returned as
+    res2 = lookup(res.id)
+    print(f"looked up task with result {type(res2.result)}:\n", res2.result)
 
 
-def describe(res):
-    print(f"\n{res.id}: {type(res)} state={res.state} result={res.result}")
-    print(f"sucessful result: {res.successful()}")
+def lookup(task_id: str):
+    """Fetch a result from the backend (sqlite) by task_id."""
+    from src.get_celery import app
+
+    res = AsyncResult(task_id, app=app)
+    return res
+
+
+def describe(res: AsyncResult):
+    print(
+        f"\nid={res.id}: state={res.state}, ready={res.ready()}, successful={res.successful()}, result={res.result}"
+    )
 
 
 if __name__ == "__main__":

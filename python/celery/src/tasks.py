@@ -13,3 +13,9 @@ def add(x, y):
 def xsum(numbers):
     time.sleep(0.5)
     return sum(numbers)
+
+
+@app.task
+def reverse(numbers):
+    time.sleep(0.5)
+    return numbers[::-1]
