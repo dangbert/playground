@@ -16,12 +16,12 @@ def main():
         description="Generate an image from a text prompt using the SDXL-Turbo model.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument(
-        "prompt",
-        type=str,
-        help="Prompt for image generation",
-        # default="A cinematic shot of a baby racoon wearing an intricate italian priest robe.",
-    )
+    # parser.add_argument(
+    #    "prompt",
+    #    type=str,
+    #    help="Prompt for image generation",
+    #    # default="A cinematic shot of a baby racoon wearing an intricate italian priest robe.",
+    # )
     parser.add_argument(
         "-o",
         "--output",
@@ -83,29 +83,35 @@ def main():
     dur_secs = timer() - start_time
     print(f"model loaded in {dur_secs:.3f} seconds")
 
-    for i in range(args.num_images):
-        start_time = timer()
-        res = pipe(
-            prompt=args.prompt,
-            num_inference_steps=args.steps,
-            guidance_scale=0.0,
-            # default is 512x512 but seems good at 1920x1080 resolution (at least with 3 inference steps)
-            height=args.height,
-            width=args.width,
-        )
-        image = res.images[0]
-        dur_secs = timer() - start_time
-        print(f"\nimage {i+1} generated in {dur_secs:.3f} seconds")
+    unique = 0
+    while True:
+        print()
+        args.prompt = input("prompt > ").strip()
+        for i in range(args.num_images):
+            start_time = timer()
+            res = pipe(
+                prompt=args.prompt,
+                num_inference_steps=args.steps,
+                guidance_scale=0.0,
+                # default is 512x512 but seems good at 1920x1080 resolution (at least with 3 inference steps)
+                height=args.height,
+                width=args.width,
+            )
+            image = res.images[0]
+            dur_secs = timer() - start_time
+            print(f"\nimage {i+1} generated in {dur_secs:.3f} seconds")
 
-        if args.output:
-            fname = args.output
-            if args.num_images > 1:
-                fname = fname[: fname.rfind(".jpg")] + str(i + 1) + ".jpg"
-            image.save(fname)
-            print(f"image wrote to: '{fname}'")
+            if args.output:
+                fname = args.output
+                while os.path.exists(fname):
+                    unique += 1
+                    fname = args.output
+                    fname = fname[: fname.rfind(".jpg")] + str(unique) + ".jpg"
+                image.save(fname)
+                print(f"image wrote to: '{fname}'")
 
-        if args.show:
-            image.show()
+            if args.show:
+                image.show()
 
 
 if __name__ == "__main__":

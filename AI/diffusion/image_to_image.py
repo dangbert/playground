@@ -18,18 +18,24 @@ def main():
         description="Modify an image with a text prompt using the SDXL-Turbo model.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument(
-        "prompt",
-        type=str,
-        help="Prompt for image generation",
-        # default="A cinematic shot of a baby racoon wearing an intricate italian priest robe.",
-    )
+    # parser.add_argument(
+    #    "prompt",
+    #    type=str,
+    #    help="Prompt for image generation",
+    #    # default="A cinematic shot of a baby racoon wearing an intricate italian priest robe.",
+    # )
     parser.add_argument(
         "-i",
         "--input",
         type=str,
         help="path of input image",
         required=True,
+    )
+    parser.add_argument(
+        "-s",
+        "--strength",
+        type=float,
+        default=0.5,
     )
     parser.add_argument(
         "-o",
@@ -80,28 +86,41 @@ def main():
 
     # prompt = "cat wizard, gandalf, lord of the rings, detailed, fantasy, cute, adorable, Pixar, Disney, 8k"
 
-    for i in range(args.num_images):
-        start_time = timer()
-        image = pipeline(
-            args.prompt,
-            image=init_image,
-            strength=0.5,
-            guidance_scale=0.0,
-            num_inference_steps=2,
-        ).images[0]
-        dur_secs = timer() - start_time
-        print(f"\nimage {i+1} generated in {dur_secs:.3f} seconds")
+    unique = 0
+    while True:
+        print()
+        args.prompt = input("prompt > ").strip()
+        try:
+            args.strength = float(input("strength > ").strip())
+        except ValueError as e:
+            print("using previous strength = ", args.strength)
+        for i in range(args.num_images):
+            start_time = timer()
+            image = pipeline(
+                args.prompt,
+                image=init_image,
+                strength=args.strength,
+                guidance_scale=0.0,
+                num_inference_steps=2,
+            ).images[0]
+            dur_secs = timer() - start_time
+            print(f"\nimage {i+1} generated in {dur_secs:.3f} seconds")
 
-        # make_image_grid([init_image, image], rows=1, cols=2)
-        if args.output:
-            fname = args.output
-            if args.num_images > 1:
-                fname = fname[: fname.rfind(".jpg")] + str(i + 1) + ".jpg"
-            image.save(fname)
-            print(f"image wrote to: '{fname}'")
+            # make_image_grid([init_image, image], rows=1, cols=2)
+            args.output = args.input
+            if args.output:
+                fname = args.output
+                # unique = 0
+                while os.path.exists(fname):
+                    unique += 1
+                    fname = args.output
+                    fname = fname[: fname.rfind(".jpg")] + "__" + str(unique) + ".jpg"
 
-        if args.show:
-            image.show()
+                image.save(fname)
+                print(f"image wrote to: '{fname}'")
+
+            if args.show:
+                image.show()
 
 
 if __name__ == "__main__":
