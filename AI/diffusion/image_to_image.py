@@ -82,9 +82,12 @@ def main():
     # init_image = load_image("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/cat.png")
     init_image = load_image(args.input)
     # TODO: try to avoid resizing?
-    init_image = init_image.resize((512, 512))
+    #init_image = init_image.resize((512, 512))
 
     # prompt = "cat wizard, gandalf, lord of the rings, detailed, fantasy, cute, adorable, Pixar, Disney, 8k"
+
+    def reset_image(new_img):
+        init_img = load_image(new_img)
 
     unique = 0
     while True:
@@ -92,6 +95,14 @@ def main():
         args.prompt = input("prompt > ").strip()
         try:
             args.strength = float(input("strength > ").strip())
+            fname = input("[image path > ]")
+            if not fname:
+                print("reusing old path")
+            elif not os.path.exists(fname):
+                print("bad path")
+                continue
+            else:
+                reset_image(fname)
         except ValueError as e:
             print("using previous strength = ", args.strength)
         for i in range(args.num_images):
