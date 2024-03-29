@@ -2,6 +2,7 @@
 
 import argparse
 import os
+from time import perf_counter
 from typing import Optional, Tuple
 
 import matplotlib.pyplot as plt
@@ -21,7 +22,6 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    args = parser.parse_args()
 
     # fname arg
     parser.add_argument(
@@ -32,19 +32,28 @@ def main():
         default=os.path.join(SCRIPT_DIR, "input.txt"),
     )
     parser.add_argument(
-        "--steps", type=int, help="Number of training steps", default=10_000
+        "--steps", "-n", type=int, help="Number of training steps", default=10_000
     )
     # seed param
     parser.add_argument(
         "--seed",
-        "-s",
         type=int,
         help="Random seed",
         default=42,
     )
+    # device
+    parser.add_argument(
+        "--device",
+        "-d",
+        type=str,
+        help="Device to use for training (auto detects if not provided)",
+        default=None,
+    )
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
+    if args.device is None:
+        args.device = get_device()
 
     with open(args.input_path, "r") as f:
         text = f.read()
@@ -66,7 +75,7 @@ def main():
 
     # let's tokenize our dataset
 
-    all_data = torch.tensor(encode(text), dtype=torch.long)
+    all_data = torch.tensor(encode(text), dtype=torch.long).to(args.device)
     print(f"full dataset: {all_data.shape=}, {all_data.dtype=}")
     print(f"{all_data[:50]=}")
 
@@ -88,14 +97,16 @@ def main():
     print(f"target: '{decode(yb[0].tolist())}'")
 
     # (22:45 in tutorial)
-    model = BigramLangModel(vocab_size)
+    model = BigramLangModel(vocab_size).to(args.device)
     logits, loss = model(xb, yb)
     print(f"{loss=:.4f}")
     # batch, time (block_size), channel (embedding_dim)
     print(f"{logits.shape=}")  # (B=4, T=8, C=65)
 
     # generate text starting with newline char
-    idx = torch.ones((1, 1), dtype=torch.long).fill_(encode("\n")[0])
+    idx = torch.zeros((1, 1), dtype=torch.long, device=args.device).fill_(
+        encode("\n")[0]
+    )
     print(f"{idx=}")
     print(f"{type(idx)=}")
     res = model.generate(idx, 25)
@@ -124,6 +135,8 @@ def main():
     text_before = decode(model.generate(idx, 100)[0].tolist())
     print(f"text before: \n'{text_before}'")
 
+    print(f"training for {args.steps} steps (device={args.device})")
+    start_time = perf_counter()
     for step in tqdm(range(args.steps), dynamic_ncols=True):
         if step % 100 == 0:
             stats["step"].append(step)
@@ -137,9 +150,14 @@ def main():
         loss.backward()
         optimizer.step()
 
-    print(stats)
+    dur = perf_counter() - start_time
+    print(f"training complete in {dur:.2f} seconds ({args.steps/dur:.2f} steps/sec)")
+
+    # print(stats)
     # generate text starting with newline char
-    idx = torch.ones((1, 1), dtype=torch.long).fill_(encode("\n")[0])
+    idx = torch.ones((1, 1), dtype=torch.long, device=args.device).fill_(
+        encode("\n")[0]
+    )
     text_after = decode(model.generate(idx, 500)[0].tolist())
     print(f"text after: \n'{text_after}'")
 
@@ -234,6 +252,22 @@ def get_batch(
     x = torch.stack([data[i : i + block_size] for i in ix])
     y = torch.stack([data[(i + 1) : i + block_size + 1] for i in ix])
     return x, y
+
+
+def get_device() -> str:
+    """Returns the device for PyTorch to use."""
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
+    elif torch.backends.mps.is_available():
+        if not torch.backends.mps.is_built():
+            print(
+                "MPS not available because the current PyTorch install was not built with MPS enabled."
+            )
+        else:
+            device = "mps"
+    return device
 
 
 if __name__ == "__main__":
