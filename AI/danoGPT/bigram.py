@@ -5,6 +5,7 @@ import os
 from time import perf_counter
 from typing import Optional, Tuple
 
+from accelerate import Accelerator
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
@@ -14,8 +15,9 @@ from tqdm import tqdm
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-batch_size = 4  # num independent sequences to process in parallel
+batch_size = 10  # num independent sequences to process in parallel
 block_size = 8  # max context length for predictions
+device = "cpu"
 
 
 def main():
@@ -52,8 +54,10 @@ def main():
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
+    global device
     if args.device is None:
-        args.device = get_device()
+        device = get_device()
+    print("using device=", device)
 
     with open(args.input_path, "r") as f:
         text = f.read()
@@ -61,7 +65,6 @@ def main():
     chars = sorted(list(set(text)))
     vocab_size = len(chars)
     print(f"{vocab_size=}")
-    print(f"{chars[0]=}")
 
     # simple tokenizer
     # string to int
@@ -70,16 +73,13 @@ def main():
     encode = lambda s: [stoi[c] for c in s]
     decode = lambda ilist: "".join([itos[n] for n in ilist])
 
-    res = encode("hello world")
-    assert decode(res) == "hello world"
+    assert decode(encode("hello world")) == "hello world"
 
     # let's tokenize our dataset
-
-    all_data = torch.tensor(encode(text), dtype=torch.long).to(args.device)
+    all_data = torch.tensor(encode(text), dtype=torch.long).to(device)
     print(f"full dataset: {all_data.shape=}, {all_data.dtype=}")
-    print(f"{all_data[:50]=}")
-
-    print(decode(all_data[:50].tolist()))
+    # print(f"{all_data[:50]=}")
+    # print(decode(all_data[:50].tolist()))
 
     train_data, val_data, test_data = split_dataset(all_data)
     data_map = {
@@ -89,30 +89,27 @@ def main():
     }
 
     xb, yb = get_batch(data_map, "train")
-    print(f"{xb.shape=}")  # inputs: (4, 8)
-    print(f"{yb.shape=}")  # target: (4, 8)
+    # print(f"{xb.shape=}")  # inputs: (4, 8)
+    # print(f"{yb.shape=}")  # target: (4, 8)
 
     # for example
-    print(f"inputs: '{decode(xb[0].tolist())}'")
-    print(f"target: '{decode(yb[0].tolist())}'")
+    # print(f"inputs: '{decode(xb[0].tolist())}'")
+    # print(f"target: '{decode(yb[0].tolist())}'")
 
     # (22:45 in tutorial)
-    model = BigramLangModel(vocab_size).to(args.device)
+    model = BigramLangModel(vocab_size).to(device)
     logits, loss = model(xb, yb)
-    print(f"{loss=:.4f}")
+    print(f"initial loss example: {loss:.4f}")
     # batch, time (block_size), channel (embedding_dim)
     print(f"{logits.shape=}")  # (B=4, T=8, C=65)
 
     # generate text starting with newline char
-    idx = torch.zeros((1, 1), dtype=torch.long, device=args.device).fill_(
-        encode("\n")[0]
-    )
-    print(f"{idx=}")
+    idx = torch.zeros((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
+    print(f"\n{idx=}")
     print(f"{type(idx)=}")
     res = model.generate(idx, 25)
     print(res.shape)
     text = decode(res[0].tolist())
-
     print(f"text='{text}'")
 
     @torch.no_grad()
@@ -133,21 +130,23 @@ def main():
     stats = {"val": [], "train": [], "step": []}
 
     text_before = decode(model.generate(idx, 100)[0].tolist())
-    print(f"text before: \n'{text_before}'")
+    print(f"\ntext before: \n'{text_before}'")
 
-    print(f"training for {args.steps} steps (device={args.device})")
+    print(f"\n\ntraining for {args.steps} steps (device={device})")
     start_time = perf_counter()
+    accelerator = Accelerator(cpu=device == "cpu")
+    model, optimizer, train_data = accelerator.prepare(model, optimizer, train_data)
     for step in tqdm(range(args.steps), dynamic_ncols=True):
         if step % 100 == 0:
             stats["step"].append(step)
             stats["val"].append(eval_model("val"))
             stats["train"].append(eval_model("train"))
 
-        xb, yb = get_batch(data_map, "train", batch_size=8, block_size=500)
+        xb, yb = get_batch(data_map, "train", batch_size=batch_size, block_size=500)
         model.train()
         optimizer.zero_grad()
         _, loss = model(xb, yb)
-        loss.backward()
+        accelerator.backward(loss)
         optimizer.step()
 
     dur = perf_counter() - start_time
@@ -155,11 +154,9 @@ def main():
 
     # print(stats)
     # generate text starting with newline char
-    idx = torch.ones((1, 1), dtype=torch.long, device=args.device).fill_(
-        encode("\n")[0]
-    )
+    idx = torch.ones((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
     text_after = decode(model.generate(idx, 500)[0].tolist())
-    print(f"text after: \n'{text_after}'")
+    print(f"\ntext after: \n'{text_after}'")
 
     plt.title("Bigram Model Training")
     plt.plot(stats["step"], stats["val"], label="val")
@@ -168,10 +165,9 @@ def main():
     # axis labels
     plt.xlabel("step")
     plt.ylabel("loss")
-    fname = "bigram_loss.png"
+    fname = "bigram_loss.pdf"
     plt.savefig(fname)
     print(f"saved plot to '{fname}'")
-    plt.show()
 
 
 class BigramLangModel(nn.Module):
@@ -252,6 +248,7 @@ def get_batch(
     x = torch.stack([data[i : i + block_size] for i in ix])
     y = torch.stack([data[(i + 1) : i + block_size + 1] for i in ix])
     return x, y
+    # return x.to(device), y.to(device)
 
 
 def get_device() -> str:
