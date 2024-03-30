@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
+"""
+Simple bigram language model, implemented using pytorch embeddings.
+A helper first level to build up to understanding GPTs.
+"""
 
 import argparse
 import os
 from time import perf_counter
 from typing import Optional, Tuple
 
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from accelerate import Accelerator
@@ -24,16 +27,20 @@ device = "cpu"
 lr = 1e-3
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
+def add_common_args(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--input-path",
         "-i",
         type=str,
         help="Path to .txt file for training/evaluation",
         default=os.path.join(SCRIPT_DIR, "input.txt"),
+    )
+    parser.add_argument(
+        "--output-path",
+        "-o",
+        type=str,
+        help="Path to .pdf file for plot",
+        default="bigram_loss.pdf",
     )
     parser.add_argument(
         "--steps", "-n", type=int, help="Number of training steps", default=10_000
@@ -51,6 +58,13 @@ def main():
         help="Device to use for training (auto detects if not provided)",
         default=None,
     )
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    add_common_args(parser)
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -66,21 +80,11 @@ def main():
     vocab_size = len(chars)
     print(f"{vocab_size=}")
 
-    # simple tokenizer
-    # string to int
-    stoi = {ch: i for i, ch in enumerate(chars)}
-    itos = {i: ch for i, ch in enumerate(chars)}
-    encode = lambda s: [stoi[c] for c in s]
-    decode = lambda ilist: "".join([itos[n] for n in ilist])
-
-    assert decode(encode("hello world")) == "hello world"
+    encode, decode = utils.get_encoder_decoder(chars)
 
     # let's tokenize our dataset
     all_data = torch.tensor(encode(text), dtype=torch.long).to(device)
     print(f"full dataset: {all_data.shape=}, {all_data.dtype=}")
-    # print(f"{all_data[:50]=}")
-    # print(decode(all_data[:50].tolist()))
-
     train_data, val_data, test_data = split_dataset(all_data)
     data_map = {
         "train": train_data,
@@ -134,6 +138,7 @@ def main():
     text_before = decode(model.generate(idx, 100)[0].tolist())
     print(f"\ntext before: \n'{text_before}'")
 
+    utils.count_params(model)
     print(f"\n\ntraining for {args.steps} steps (device={device})")
     start_time = perf_counter()
     accelerator = Accelerator(cpu=device == "cpu")
@@ -162,16 +167,7 @@ def main():
     text_after = decode(model.generate(idx, 500)[0].tolist())
     print(f"\ntext after: \n'{text_after}'")
 
-    plt.title("Bigram Model Training")
-    plt.plot(stats["step"], stats["val"], label="val")
-    plt.plot(stats["step"], stats["train"], label="train")
-    plt.legend()
-    # axis labels
-    plt.xlabel("step")
-    plt.ylabel("loss")
-    fname = "bigram_loss.pdf"
-    plt.savefig(fname)
-    print(f"saved plot to '{fname}'")
+    utils.plot_stats(stats, "Bigram Model Training", args.output_path)
 
 
 class BigramLangModel(nn.Module):

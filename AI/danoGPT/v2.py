@@ -5,7 +5,6 @@ import os
 from time import perf_counter
 from typing import Optional
 
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from accelerate import Accelerator
@@ -13,7 +12,7 @@ from torch.nn import functional as F
 from tqdm import tqdm
 
 import utils
-from bigram import get_batch, split_dataset
+from bigram import add_common_args, get_batch, split_dataset
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -21,6 +20,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # hyperparameters
 batch_size = 10  # num independent sequences to process in parallel
 block_size = 8  # max context length for predictions
+n_heads = 4
 device = "cpu"
 n_embed = 32
 lr = 1e-3
@@ -30,36 +30,7 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument(
-        "--input-path",
-        "-i",
-        type=str,
-        help="Path to .txt file for training/evaluation",
-        default="input.txt",
-    )
-    parser.add_argument(
-        "--output-path",
-        "-o",
-        type=str,
-        help="Path to .pdf file for plot",
-        default="v2_loss.pdf",
-    )
-    parser.add_argument(
-        "--steps", "-n", type=int, help="Number of training steps", default=10_000
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        help="Random seed",
-        default=42,
-    )
-    parser.add_argument(
-        "--device",
-        "-d",
-        type=str,
-        help="Device to use for training (auto detects if not provided)",
-        default=None,
-    )
+    add_common_args(parser)
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -74,22 +45,11 @@ def main():
     chars = sorted(list(set(text)))
     vocab_size = len(chars)
     print(f"{vocab_size=}")
-
-    # simple tokenizer
-    # string to int
-    stoi = {ch: i for i, ch in enumerate(chars)}
-    itos = {i: ch for i, ch in enumerate(chars)}
-    encode = lambda s: [stoi[c] for c in s]
-    decode = lambda ilist: "".join([itos[n] for n in ilist])
-
-    assert decode(encode("hello world")) == "hello world"
+    encode, decode = utils.get_encoder_decoder(chars)
 
     # let's tokenize our dataset
     all_data = torch.tensor(encode(text), dtype=torch.long).to(device)
     print(f"full dataset: {all_data.shape=}, {all_data.dtype=}")
-    # print(f"{all_data[:50]=}")
-    # print(decode(all_data[:50].tolist()))
-
     train_data, val_data, test_data = split_dataset(all_data)
     data_map = {
         "train": train_data,
@@ -97,20 +57,8 @@ def main():
         "val": val_data,
     }
 
-    xb, yb = get_batch(data_map, "train")
-    # print(f"{xb.shape=}")  # inputs: (4, 8)
-    # print(f"{yb.shape=}")  # target: (4, 8)
-
-    # for example
-    # print(f"inputs: '{decode(xb[0].tolist())}'")
-    # print(f"target: '{decode(yb[0].tolist())}'")
-
     # (22:45 in tutorial)
-    model = LangModel(vocab_size, n_embed, block_size).to(device)
-    logits, loss = model(xb, yb)
-    print(f"initial loss example: {loss:.4f}")
-    # batch, time (block_size), channel (embedding_dim)
-    print(f"{logits.shape=}")  # (B=4, T=8, C=65)
+    model = LangModel(vocab_size, n_embed, block_size, n_heads=n_heads).to(device)
 
     # generate text starting with newline char
     idx = torch.zeros((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
@@ -141,6 +89,7 @@ def main():
     text_before = decode(model.generate(idx, 100)[0].tolist())
     print(f"\ntext before: \n'{text_before}'")
 
+    utils.count_params(model)
     print(f"\n\ntraining for {args.steps} steps (device={device})")
     start_time = perf_counter()
     accelerator = Accelerator(cpu=device == "cpu")
@@ -169,19 +118,13 @@ def main():
     text_after = decode(model.generate(idx, 500)[0].tolist())
     print(f"\ntext after: \n'{text_after}'")
 
-    plt.title("V2 Model Training")
-    plt.plot(stats["step"], stats["val"], label="val")
-    plt.plot(stats["step"], stats["train"], label="train")
-    plt.legend()
-    # axis labels
-    plt.xlabel("step")
-    plt.ylabel("loss")
-    plt.savefig(args.output_path)
-    print(f"saved plot to '{args.output_path}'")
+    utils.plot_stats(stats, "V2 Model Training", args.output_path)
 
 
 class LangModel(nn.Module):
-    def __init__(self, vocab_size: int, n_embed: int, block_size: int):
+    def __init__(
+        self, vocab_size: int, n_embed: int, block_size: int, n_heads: int = 4
+    ):
         super().__init__()
         self.block_size = block_size
         self.token_embedding_table = nn.Embedding(vocab_size, n_embed)
@@ -189,7 +132,14 @@ class LangModel(nn.Module):
         self.pos_embedding_table = nn.Embedding(block_size, n_embed)
 
         # self-attention head
-        self.sa_head = Head(n_embed, block_size, head_size=n_embed)
+        assert (
+            n_embed % n_heads == 0
+        ), f"must be multiple of {n_heads} for current implementation"
+        self.sa_heads = MultiHeadAttention(
+            n_heads, n_embed, block_size, head_size=n_embed // n_heads
+        )
+        # self.sa_heads = Head(n_embed, block_size, head_size=n_embed)
+        self.ffwd = FeedForward(n_embed)
         self.lm_head = nn.Linear(n_embed, vocab_size)
 
     def forward(self, idx: torch.Tensor, targets: Optional[torch.Tensor] = None):
@@ -201,7 +151,8 @@ class LangModel(nn.Module):
         tok_emb = self.token_embedding_table(idx)  # (B,T,C)
         pos_emb = self.pos_embedding_table(torch.arange(T, device=device))  # (T,C)
         x = tok_emb + pos_emb  # (B,T,C)
-        x = self.sa_head(x)
+        x = self.sa_heads(x)
+        x = self.ffwd(x)  # (B,T,C)
         logits = self.lm_head(x)  # (B,T,vocab_size)
 
         B, T, C = logits.shape
@@ -223,7 +174,6 @@ class LangModel(nn.Module):
         idx is (B,T) of indieces in current context.
         """
 
-        # TODO: continue from 1:21
         for _ in range(max_new_tokens):
             # crop idx to last block_size tokens
             idx_cur = idx[:, -self.block_size :]
@@ -237,11 +187,32 @@ class LangModel(nn.Module):
         return idx
 
 
+class MultiHeadAttention(nn.Module):
+    def __init__(
+        self,
+        n_heads: int,
+        n_embed: int,
+        block_size: int,
+        head_size: int,
+    ):
+        """Inefficient implementation of Multi-Headed attention."""
+        super().__init__()
+        self.heads = nn.ModuleList(
+            [Head(n_embed, block_size, head_size) for _ in range(n_heads)]
+        )
+
+    def forward(self, x: torch.Tensor):
+        # compute and concatenate over channel dimension
+        return torch.cat([h(x) for h in self.heads], dim=-1)
+
+
 class Head(nn.Module):
     """
     Single head of self-attention.
     Specifically for a decoder block as masks are used to prevent tokens from attending to future tokens.
     See from https://youtu.be/kCc8FmEb1nY?t=4752
+
+    TODO: this can be reimplemented to add another dimension to support multi-headed attention.
     """
 
     def __init__(
@@ -285,6 +256,18 @@ class Head(nn.Module):
         # let values combine according to query:key affinities
         out = weights @ self.value(x)  # (B,T,T) @ (B,T,value_size) = (B,T,value_size)
         return out
+
+
+class FeedForward(nn.Module):
+    def __init__(self, n_embed: int):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n_embed, n_embed),
+            nn.ReLU(),
+        )
+
+    def forward(self, x: torch.Tensor):
+        return self.net(x)
 
 
 if __name__ == "__main__":
