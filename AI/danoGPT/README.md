@@ -13,28 +13,27 @@ poetry install
 ````
 
 ````bash
+# test and evaluate v2 model
+./v2.py -d cpu
+
+
 # train and evaluate bigram model
 ./bigram.py
 # it autodetects the device, but you can manually specify e.g. with:
 ./bigram.py -d cpu # faster than MPS sadly :(
 
 # you can also try running with accelerate (I didn't see a speedup on macbook at least)
-accelerate launch  bigram.py -n 5000
+accelerate launch bigram.py -n 5000
 ````
 
 ## Development Notes:
+
 ````bash
-# run unit tests
-pytest -v
+# ensure dev dependencies are installed
+poetry install --with dev
 
-# format code
-ruff format .
-
-# fix linting issues
-ruff check --fix .
-
-# check type errors
-mypy .
+# run unit tests, code formatting, linting and type checking
+./checks.sh
 ````
 
 ## See also:

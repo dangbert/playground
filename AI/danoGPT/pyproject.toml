@@ -27,6 +27,10 @@ extend-select = ["I"]
 # ignore: E731 Do not assign a `lambda` expression, use a `def`
 ignore = ["E731"]
 
+[[tool.mypy.overrides]]
+module = "accelerate.*"
+ignore_missing_imports = true
+follow_imports = "skip"
 
 [build-system]
 requires = ["poetry-core"]
