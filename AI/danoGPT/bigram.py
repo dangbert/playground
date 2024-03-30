@@ -5,12 +5,14 @@ import os
 from time import perf_counter
 from typing import Optional, Tuple
 
-from accelerate import Accelerator
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+from accelerate import Accelerator
 from torch.nn import functional as F
 from tqdm import tqdm
+
+import utils
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -24,8 +26,6 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-
-    # fname arg
     parser.add_argument(
         "--input-path",
         "-i",
@@ -56,7 +56,7 @@ def main():
     torch.manual_seed(args.seed)
     global device
     if args.device is None:
-        device = get_device()
+        device = utils.get_device()
     print("using device=", device)
 
     with open(args.input_path, "r") as f:
@@ -249,22 +249,6 @@ def get_batch(
     y = torch.stack([data[(i + 1) : i + block_size + 1] for i in ix])
     return x, y
     # return x.to(device), y.to(device)
-
-
-def get_device() -> str:
-    """Returns the device for PyTorch to use."""
-    device = "cpu"
-    if torch.cuda.is_available():
-        device = "cuda"
-    # mac MPS support: https://pytorch.org/docs/stable/notes/mps.html
-    elif torch.backends.mps.is_available():
-        if not torch.backends.mps.is_built():
-            print(
-                "MPS not available because the current PyTorch install was not built with MPS enabled."
-            )
-        else:
-            device = "mps"
-    return device
 
 
 if __name__ == "__main__":

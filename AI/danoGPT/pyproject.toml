@@ -19,6 +19,7 @@ accelerate = "^0.28.0"
 mypy = "^1.9.0"
 ruff = "^0.3.4"
 types-tqdm = "^4.66.0.20240106"
+pytest = "^8.1.1"
 
 [tool.ruff.lint]
 # Enable the isort rules.
