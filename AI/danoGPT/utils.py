@@ -18,7 +18,8 @@ def get_encoder_decoder(chars: list[str]) -> Tuple[Callable, Callable]:
     return encode, decode
 
 
-def plot_stats(stats: dict, title: str, fname: str):
+def plot_stats(stats: dict, title: str, fname: str, verbose: bool = False):
+    plt.clf()
     plt.title(title)
     plt.plot(stats["step"], stats["val"], label="val")
     plt.plot(stats["step"], stats["train"], label="train")
@@ -27,7 +28,8 @@ def plot_stats(stats: dict, title: str, fname: str):
     plt.xlabel("step")
     plt.ylabel("loss")
     plt.savefig(fname)
-    print(f"saved plot to '{fname}'")
+    if verbose:
+        print(f"saved plot to '{fname}'")
 
 
 def get_device() -> str:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import os
 from time import perf_counter
 from typing import Optional
@@ -18,12 +19,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 # hyperparameters
-batch_size = 10  # num independent sequences to process in parallel
-block_size = 8  # max context length for predictions
+batch_size = 10
+block_size = 128
 n_heads = 4
 device = "cpu"
 n_embed = 32
 lr = 1e-3
+n_blocks = 3
 
 
 def main():
@@ -32,6 +34,8 @@ def main():
     )
     add_common_args(parser)
     args = parser.parse_args()
+    if os.path.isdir(args.output_path):
+        args.output_path = os.path.join(args.output_path, "out")
 
     torch.manual_seed(args.seed)
     global device
@@ -57,17 +61,9 @@ def main():
         "val": val_data,
     }
 
-    # (22:45 in tutorial)
-    model = LangModel(vocab_size, n_embed, block_size, n_heads=n_heads).to(device)
-
-    # generate text starting with newline char
-    idx = torch.zeros((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
-    print(f"\n{idx=}")
-    print(f"{type(idx)=}")
-    res = model.generate(idx, 25)
-    print(res.shape)
-    text = decode(res[0].tolist())
-    print(f"text='{text}'")
+    model = LangModel(
+        vocab_size, n_embed, block_size, n_heads=n_heads, n_blocks=n_blocks
+    ).to(device)
 
     @torch.no_grad()
     def eval_model(split: str):
@@ -86,8 +82,25 @@ def main():
 
     stats = {"val": [], "train": [], "step": []}
 
+    idx = torch.zeros((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
     text_before = decode(model.generate(idx, 100)[0].tolist())
     print(f"\ntext before: \n'{text_before}'")
+
+    def dump_text():
+        idx = torch.ones((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
+        # print(f"\ntext after: \n'{text_after}'")
+        text_after = decode(model.generate(idx, 10_000)[0].tolist())
+        text_path = args.output_path + ".output.txt"
+        with open(text_path, "w") as f:
+            f.write(text_after)
+        print(f"wrote generated text to '{text_path}'")
+
+        # dump model
+        model_path = args.output_path + ".model"
+        torch.save(model.state_dict(), model_path)
+
+        with open(args.output_path + ".stats.json", "w") as f:
+            json.dump(stats, f, indent=2)
 
     utils.count_params(model)
     print(f"\n\ntraining for {args.steps} steps (device={device})")
@@ -99,6 +112,9 @@ def main():
             stats["step"].append(step)
             stats["val"].append(eval_model("val"))
             stats["train"].append(eval_model("train"))
+            utils.plot_stats(stats, "V2 Model Training", args.output_path + "loss.pdf")
+        if step % 500 == 0:
+            dump_text()
 
         xb, yb = get_batch(
             data_map, "train", batch_size=batch_size, block_size=block_size
@@ -112,34 +128,32 @@ def main():
     dur = perf_counter() - start_time
     print(f"training complete in {dur:.2f} seconds ({args.steps/dur:.2f} steps/sec)")
 
-    # print(stats)
-    # generate text starting with newline char
-    idx = torch.ones((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
-    text_after = decode(model.generate(idx, 500)[0].tolist())
-    print(f"\ntext after: \n'{text_after}'")
+    dump_text()
 
-    utils.plot_stats(stats, "V2 Model Training", args.output_path)
+    utils.plot_stats(
+        stats, "V2 Model Training", args.output_path + "loss.pdf", verbose=True
+    )
 
 
 class LangModel(nn.Module):
     def __init__(
-        self, vocab_size: int, n_embed: int, block_size: int, n_heads: int = 4
+        self,
+        vocab_size: int,
+        n_embed: int,
+        block_size: int,
+        n_heads: int = 4,
+        n_blocks: int = n_blocks,
     ):
         super().__init__()
+        self.blocks = nn.Sequential(
+            *[Block(n_embed, block_size, n_heads) for _ in range(n_blocks)]
+        )
         self.block_size = block_size
         self.token_embedding_table = nn.Embedding(vocab_size, n_embed)
         # position embeddings: define embedding vectors for indices [0, block_size)
         self.pos_embedding_table = nn.Embedding(block_size, n_embed)
 
         # self-attention head
-        assert (
-            n_embed % n_heads == 0
-        ), f"must be multiple of {n_heads} for current implementation"
-        self.sa_heads = MultiHeadAttention(
-            n_heads, n_embed, block_size, head_size=n_embed // n_heads
-        )
-        # self.sa_heads = Head(n_embed, block_size, head_size=n_embed)
-        self.ffwd = FeedForward(n_embed)
         self.lm_head = nn.Linear(n_embed, vocab_size)
 
     def forward(self, idx: torch.Tensor, targets: Optional[torch.Tensor] = None):
@@ -151,8 +165,7 @@ class LangModel(nn.Module):
         tok_emb = self.token_embedding_table(idx)  # (B,T,C)
         pos_emb = self.pos_embedding_table(torch.arange(T, device=device))  # (T,C)
         x = tok_emb + pos_emb  # (B,T,C)
-        x = self.sa_heads(x)
-        x = self.ffwd(x)  # (B,T,C)
+        x = self.blocks(x)
         logits = self.lm_head(x)  # (B,T,vocab_size)
 
         B, T, C = logits.shape
@@ -187,23 +200,43 @@ class LangModel(nn.Module):
         return idx
 
 
+class Block(nn.Module):
+    def __init__(self, n_embed: int, block_size: int, n_heads: int = 4):
+        super().__init__()
+        # self attention
+        self.sa = MultiHeadAttention(n_heads, n_embed, block_size)
+        self.norm1 = nn.LayerNorm(n_embed)
+        self.ffwd = FeedForward(n_embed)
+        self.norm2 = nn.LayerNorm(n_embed)
+
+    def forward(self, x: torch.Tensor):
+        x = x + self.sa(self.norm1(x))  # skip connection
+        x = x + self.ffwd(self.norm2(x))
+        return x
+
+
 class MultiHeadAttention(nn.Module):
     def __init__(
         self,
         n_heads: int,
         n_embed: int,
         block_size: int,
-        head_size: int,
     ):
         """Inefficient implementation of Multi-Headed attention."""
         super().__init__()
+        assert n_embed % n_heads == 0, f"n_embed must be multiple of {n_heads}"
+        head_size = n_embed // n_heads
         self.heads = nn.ModuleList(
             [Head(n_embed, block_size, head_size) for _ in range(n_heads)]
         )
+        # TODO: understand "projection back into residual pathway" ??
+        self.proj = nn.Linear(n_embed, n_embed)
 
     def forward(self, x: torch.Tensor):
         # compute and concatenate over channel dimension
-        return torch.cat([h(x) for h in self.heads], dim=-1)
+        out = torch.cat([h(x) for h in self.heads], dim=-1)
+        out = self.proj(out)
+        return out
 
 
 class Head(nn.Module):
@@ -262,8 +295,11 @@ class FeedForward(nn.Module):
     def __init__(self, n_embed: int):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(n_embed, n_embed),
+            # using factor of 4 (see "attention is all you need" section 3.3)
+            nn.Linear(n_embed, 4 * n_embed),
             nn.ReLU(),
+            # "projection layer going back into the residual pathway"
+            nn.Linear(4 * n_embed, n_embed),
         )
 
     def forward(self, x: torch.Tensor):

@@ -37,6 +37,7 @@ poetry install --with dev
 ````
 
 ## See also:
+* [repo: nanoGPT](https://github.com/karpathy/nanoGPT/blob/master/model.py)
 * [notebook tutorial: Transformers and Multi-Head attention](https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial6/Transformers_and_MHAttention.html)
 * [paper: Attention is All you Need](https://proceedings.neurips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html)
 * more advanced tokenizers:

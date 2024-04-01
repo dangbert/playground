@@ -39,7 +39,7 @@ def add_common_args(parser: argparse.ArgumentParser):
         "--output-path",
         "-o",
         type=str,
-        help="Path to .pdf file for plot",
+        help="Folder or prefix to save output artifacts",
         default="bigram_loss.pdf",
     )
     parser.add_argument(
@@ -92,29 +92,14 @@ def main():
         "val": val_data,
     }
 
-    xb, yb = get_batch(data_map, "train")
-    # print(f"{xb.shape=}")  # inputs: (4, 8)
-    # print(f"{yb.shape=}")  # target: (4, 8)
-
-    # for example
-    # print(f"inputs: '{decode(xb[0].tolist())}'")
-    # print(f"target: '{decode(yb[0].tolist())}'")
-
     # (22:45 in tutorial)
     model = BigramLangModel(vocab_size).to(device)
+
+    xb, yb = get_batch(data_map, "train")
     logits, loss = model(xb, yb)
     print(f"initial loss example: {loss:.4f}")
     # batch, time (block_size), channel (embedding_dim)
     print(f"{logits.shape=}")  # (B=4, T=8, C=65)
-
-    # generate text starting with newline char
-    idx = torch.zeros((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
-    print(f"\n{idx=}")
-    print(f"{type(idx)=}")
-    res = model.generate(idx, 25)
-    print(res.shape)
-    text = decode(res[0].tolist())
-    print(f"text='{text}'")
 
     @torch.no_grad()
     def eval_model(split: str):
@@ -135,6 +120,7 @@ def main():
 
     stats = {"val": [], "train": [], "step": []}
 
+    idx = torch.zeros((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
     text_before = decode(model.generate(idx, 100)[0].tolist())
     print(f"\ntext before: \n'{text_before}'")
 
@@ -161,13 +147,17 @@ def main():
     dur = perf_counter() - start_time
     print(f"training complete in {dur:.2f} seconds ({args.steps/dur:.2f} steps/sec)")
 
-    # print(stats)
-    # generate text starting with newline char
     idx = torch.ones((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
-    text_after = decode(model.generate(idx, 500)[0].tolist())
-    print(f"\ntext after: \n'{text_after}'")
 
-    utils.plot_stats(stats, "Bigram Model Training", args.output_path)
+    text_after = decode(model.generate(idx, 10_000)[0].tolist())
+    text_path = os.path.join(args.output_path, ".output.txt")
+    with open(text_path, "w") as f:
+        f.write(text_after)
+    print(f"wrote generated text to '{text_path}'")
+
+    utils.plot_stats(
+        stats, "V2 Model Training", args.output_path + "loss.pdf", verbose=True
+    )
 
 
 class BigramLangModel(nn.Module):

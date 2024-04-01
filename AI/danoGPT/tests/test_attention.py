@@ -25,21 +25,20 @@ def test_head__can_run():
 def test_multihead__can_run():
     """Verify Head module can be used for forward pass without raising exception."""
     n_embed = 16
-    head_size = 4
     block_size = 8
-    n_heads = 5
+    n_heads = 4
 
-    head = MultiHeadAttention(n_heads, n_embed, block_size, head_size)
+    head = MultiHeadAttention(n_heads, n_embed, block_size)
 
     batch_size = 3
     x = torch.randint(0, 10, (batch_size, block_size, n_embed), dtype=torch.float)
     out = head(x)
-    assert out.shape == (batch_size, block_size, n_heads * head_size)
+    assert out.shape == (batch_size, block_size, n_embed)
 
     # should also support smaller block sizes
     x = torch.randint(0, 10, (batch_size, block_size - 2, n_embed), dtype=torch.float)
     out = head(x)
-    assert out.shape == (batch_size, block_size - 2, n_heads * head_size)
+    assert out.shape == (batch_size, block_size - 2, n_embed)
 
 
 def test_langmodel():
