@@ -1,5 +1,5 @@
 # danoGPT
->My implementation of Andrej Karpathy's amazing [Tutorial: "Let's build GPT"](https://www.youtube.com/watch?v=kCc8FmEb1nY).  See also his [repo: nanoGPT](https://github.com/karpathy/nanoGPT/blob/master/model.py).
+>My implementation of Andrej Karpathy's amazing [Tutorial: "Let's build GPT"](https://www.youtube.com/watch?v=kCc8FmEb1nY).
 
 ## Setup / Usage
 
@@ -37,9 +37,11 @@ poetry install --with dev
 ````
 
 ## See also:
-* [repo: nanoGPT](https://github.com/karpathy/nanoGPT/blob/master/model.py)
+* [repo for video lecture](https://github.com/karpathy/ng-video-lecture/blob/master/gpt.py)
+* [repo: nanoGPT](https://github.com/karpathy/nanoGPT/blob/master/model.py) (cleaner more general version of video's repo)
 * [notebook tutorial: Transformers and Multi-Head attention](https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial6/Transformers_and_MHAttention.html)
 * [paper: Attention is All you Need](https://proceedings.neurips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html)
+* [Hugging Face: OpenAI GPT2](https://huggingface.co/docs/transformers/model_doc/gpt2)
 * more advanced tokenizers:
     * [repo: sentencepiece](https://github.com/google/sentencepiece) (encoder from google)
     * [repo: tiktoken](https://github.com/openai/tiktoken) (encoders from OpenAI)

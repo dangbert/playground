@@ -19,13 +19,17 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 # hyperparameters
-batch_size = 10
-block_size = 128
-n_heads = 4
+batch_size = 64
+block_size = 256  # max context length for predictions
+n_heads = 6
 device = "cpu"
-n_embed = 32
-lr = 1e-3
-n_blocks = 3
+n_embed = 384
+lr = 3e-4
+n_blocks = 8
+dropout = 0.2
+
+
+encode, decode = None, None
 
 
 def main():
@@ -33,12 +37,22 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     add_common_args(parser)
+    parser.add_argument(
+        "-r", "--replay", action="store_true", help="reload pretrained model"
+    )
     args = parser.parse_args()
     if os.path.isdir(args.output_path):
         args.output_path = os.path.join(args.output_path, "out")
+    model_path = args.output_path + ".model"
+    if os.path.exists(model_path):
+        assert (
+            args.replay
+        ), f"rerun with --replay or delete existing model '{model_path}'"
 
     torch.manual_seed(args.seed)
     global device
+    global encode
+    global decode
     if args.device is None:
         device = utils.get_device()
     print("using device=", device)
@@ -65,14 +79,27 @@ def main():
         vocab_size, n_embed, block_size, n_heads=n_heads, n_blocks=n_blocks
     ).to(device)
 
+    if args.replay:
+        checkpoint = torch.load(model_path)
+        model.load_state_dict(checkpoint)
+        model.eval()
+        idx = torch.zeros((1, 1), dtype=torch.long, device=device).fill_(
+            encode("\n")[0]
+        )
+        some_text = decode(model.generate(idx, 100)[0].tolist())
+        print(f"\nsome_text: \n'{some_text}'")
+        breakpoint()
+        exit(0)
+
     @torch.no_grad()
-    def eval_model(split: str):
+    def eval_model(split: str, samples: int = 100):
         """return average loss across "some part" of a given dataset split (e.g. 'val')."""
         total_loss = 0.0
-        samples = 100
         model.eval()
         for _ in range(samples):
-            xb, yb = get_batch(data_map, split, batch_size=8, block_size=block_size)
+            xb, yb = get_batch(
+                data_map, split, batch_size=batch_size, block_size=block_size
+            )
             _, loss = model(xb, yb)
             total_loss += loss.item()
         return total_loss / samples
@@ -83,20 +110,23 @@ def main():
     stats = {"val": [], "train": [], "step": []}
 
     idx = torch.zeros((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
-    text_before = decode(model.generate(idx, 100)[0].tolist())
-    print(f"\ntext before: \n'{text_before}'")
+    some_text = decode(model.generate(idx, 100)[0].tolist())
+    print(f"\ntext before: \n'{some_text}'")
 
-    def dump_text():
-        idx = torch.ones((1, 1), dtype=torch.long, device=device).fill_(encode("\n")[0])
+    def dump_text(length: int, prompt: str = "\n", verbose: bool = False):
+        idx = torch.ones((1, 1), dtype=torch.long, device=device).fill_(
+            encode(prompt)[0]
+        )
         # print(f"\ntext after: \n'{text_after}'")
-        text_after = decode(model.generate(idx, 10_000)[0].tolist())
+        model.eval()
+        text_after = decode(model.generate(idx, length)[0].tolist())
         text_path = args.output_path + ".output.txt"
         with open(text_path, "w") as f:
             f.write(text_after)
-        print(f"wrote generated text to '{text_path}'")
+        if verbose:
+            print(f"wrote generated text to '{text_path}'")
 
         # dump model
-        model_path = args.output_path + ".model"
         torch.save(model.state_dict(), model_path)
 
         with open(args.output_path + ".stats.json", "w") as f:
@@ -114,7 +144,7 @@ def main():
             stats["train"].append(eval_model("train"))
             utils.plot_stats(stats, "V2 Model Training", args.output_path + "loss.pdf")
         if step % 500 == 0:
-            dump_text()
+            dump_text(1000)
 
         xb, yb = get_batch(
             data_map, "train", batch_size=batch_size, block_size=block_size
@@ -128,7 +158,7 @@ def main():
     dur = perf_counter() - start_time
     print(f"training complete in {dur:.2f} seconds ({args.steps/dur:.2f} steps/sec)")
 
-    dump_text()
+    dump_text(10_000, verbose=True)
 
     utils.plot_stats(
         stats, "V2 Model Training", args.output_path + "loss.pdf", verbose=True
@@ -180,6 +210,7 @@ class LangModel(nn.Module):
         loss = F.cross_entropy(logits, targets)
         return logits, loss
 
+    @torch.no_grad()
     def generate(self, idx: torch.Tensor, max_new_tokens: int):
         """
         Given context (idx tokens), predict max_new_tokens.
@@ -221,6 +252,7 @@ class MultiHeadAttention(nn.Module):
         n_heads: int,
         n_embed: int,
         block_size: int,
+        dropout: float = dropout,
     ):
         """Inefficient implementation of Multi-Headed attention."""
         super().__init__()
@@ -231,11 +263,12 @@ class MultiHeadAttention(nn.Module):
         )
         # TODO: understand "projection back into residual pathway" ??
         self.proj = nn.Linear(n_embed, n_embed)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor):
         # compute and concatenate over channel dimension
         out = torch.cat([h(x) for h in self.heads], dim=-1)
-        out = self.proj(out)
+        out = self.dropout(self.proj(out))
         return out
 
 
@@ -254,6 +287,7 @@ class Head(nn.Module):
         block_size: int,
         head_size: int,
         value_size: Optional[int] = None,
+        dropout: float = dropout,
     ):
         """
         params:
@@ -267,6 +301,7 @@ class Head(nn.Module):
         self.query = nn.Linear(n_embed, head_size, bias=False)
         self.value = nn.Linear(n_embed, value_size, bias=False)
         self.register_buffer("tril", torch.tril(torch.ones((block_size, block_size))))
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor):
         head_size = self.key.weight.shape[1]
@@ -285,6 +320,9 @@ class Head(nn.Module):
             * head_size**-0.5
         )
         weights = F.softmax(weights, dim=-1)
+        weights = self.dropout(
+            weights
+        )  # randomly prevent some nodes from communicating
 
         # let values combine according to query:key affinities
         out = weights @ self.value(x)  # (B,T,T) @ (B,T,value_size) = (B,T,value_size)
@@ -292,7 +330,7 @@ class Head(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, n_embed: int):
+    def __init__(self, n_embed: int, dropout: float = dropout):
         super().__init__()
         self.net = nn.Sequential(
             # using factor of 4 (see "attention is all you need" section 3.3)
@@ -300,6 +338,7 @@ class FeedForward(nn.Module):
             nn.ReLU(),
             # "projection layer going back into the residual pathway"
             nn.Linear(4 * n_embed, n_embed),
+            nn.Dropout(dropout),
         )
 
     def forward(self, x: torch.Tensor):
