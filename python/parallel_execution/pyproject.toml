@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "parallel-execution"
+version = "0.1.0"
+description = ""
+authors = ["Daniel Engbert <end1@umbc.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+greenlet = "^3.0.3"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
