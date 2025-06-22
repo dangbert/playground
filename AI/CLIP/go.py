@@ -3,13 +3,11 @@
 
 import os
 import argparse
-import sys
 
 import torch
 import clip
 from PIL import Image
 import time
-import torch.nn.functional as F
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SUPPORTED_EXTS = ["jpg", "jpeg", "png"]
@@ -31,6 +29,7 @@ def main():
         "--target",
         type=str,
         help="target image to search for neighbors of",
+        required=False,
     )
     print(f"available models:")
     print(clip.available_models())
@@ -38,8 +37,6 @@ def main():
 
     assert os.path.isdir(args.input_dir)
     img_paths = find_images(args.input_dir)
-    assert os.path.isfile(args.target)
-    args.target = os.path.abspath(args.target)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = clip.load(MODEL_NAME, device=device)
@@ -54,6 +51,12 @@ def main():
             features = model.encode_image(image)
             features /= features.norm(dim=-1, keepdim=True)
             return features
+        
+        def encode_text(text: str) -> torch.Tensor:
+            text = clip.tokenize([text]).to(device)
+            text_features = model.encode_text(text)
+            text_features /= text_features.norm(dim=-1, keepdim=True)
+            return text_features
 
 
         # target_features = encode_image(args.target)
@@ -64,20 +67,22 @@ def main():
 
             all_features[os.path.basename(img_path)] = img_features
             if i % 5 == 0:
-                print(f"at image {i}/{len(img_paths)}, averaging {(dur/len(all_features)):.4f} sec/image")
+                print(f"at image {i+1}/{len(img_paths)}, averaging {(dur/len(all_features)):.4f} sec/image")
     
         torch.save(all_features, CACHE_PATH)
         print(f"wrote '{CACHE_PATH}'")
         x = torch.stack(list(all_features.values())).to(device)
 
-        def query_similar(fname: str) -> str:
+        def query_similar(query: str, text_mode: bool, input_dir: str) -> str:
             """Given an image, return the name of the most similar image."""
-            if fname in all_features:
-                target_features = all_features[fname]
+            if text_mode:
+                target_features = encode_text(query)
+            elif query in all_features:
+                target_features = all_features[query]
             else:
-                target_features = encode_image(fname)
+                target_features = encode_image(query)
 
-            sims =  (x @ target_features.T).squeeze(1)  # Compute cosine similarity
+            sims =  (x @ target_features.T).squeeze(1)  # compute cosine similarity
             print(f"{sims.shape=}")
             top5_values, top5_indices = sims.topk(5, largest=True, axis=0)
 
@@ -87,21 +92,29 @@ def main():
                 k_idx_map[i] = name
                 i += 1
 
-            print(f"\n\nmost similar images to {fname}:")
+            print(f"\n\nmost similar images to {query}:")
             # get matching filenames
             matches = [k_idx_map[i] for i in top5_indices.flatten().tolist()]
+            # open second-best match with xdg-open
+            best_match = matches[0] if text_mode else matches[1] # skip self
             print("\n".join(matches))
+            if len(matches) > 1:
+                os.system(f"xdg-open '{input_dir}/{best_match}'")
+            return best_match
         
-        query_similar(args.target)
-        while True:
-            target = input(f"image path > ").strip()
-            if not os.path.isabs(target):
-                target = os.path.join(args.input_dir, target)
+        input_dir = os.path.abspath(args.input_dir)
+        if args.target:
+            query_similar(args.target, input_dir=input_dir)
 
-            try:
-                query_similar(target)
-            except FileNotFoundError:
-                print(f"file not found")
+        while True:
+            target = input(f"image path (or description) > ").strip()
+            # if not os.path.isabs(target):
+            #     target = os.path.join(args.input_dir, target)
+            if not os.path.isfile(target):
+                print(f"file not found, querying as text label instead...")
+                query_similar(target, text_mode=True, input_dir=input_dir)
+            else:
+                query_similar(target, text_mode=False, input_dir=input_dir)
 
 
 def find_images(input_dir: str) -> list[str]:
