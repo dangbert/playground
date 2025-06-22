@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "danogpt"
+version = "0.1.0"
+description = ""
+authors = ["Daniel Engbert <end1@umbc.edu>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.2.2"
+ipykernel = "^6.29.4"
+matplotlib = "^3.8.3"
+tqdm = "^4.66.2"
+accelerate = "^0.28.0"
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.9.0"
+ruff = "^0.3.4"
+types-tqdm = "^4.66.0.20240106"
+pytest = "^8.1.1"
+
+[tool.ruff.lint]
+# Enable the isort rules.
+extend-select = ["I"]
+# ignore: E731 Do not assign a `lambda` expression, use a `def`
+ignore = ["E731"]
+
+[[tool.mypy.overrides]]
+module = "accelerate.*"
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
