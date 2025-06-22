@@ -1,0 +1,15 @@
+{
+  "name": "fireship-tutorial",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {},
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {
+    "@nx/js": "19.6.5",
+    "nx": "19.6.5"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
+}
