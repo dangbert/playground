@@ -9,6 +9,8 @@ TODO:
 
 * [intro: video tutorial](https://www.youtube.com/watch?v=6RbJYN7SoRs)
 
+* next steps: https://github.com/anordin95/a-conceptual-overview-of-asyncio/blob/main/readme.md
+
 ````python
 ./aio.py
 ````
