@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+
 	// https://pkg.go.dev/rsc.io/quote@v1.5.2
 	"rsc.io/quote"
 	// my module

@@ -3,6 +3,7 @@ package greetings
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 )
 
 func Hello(name string) (string, error) {
@@ -11,6 +12,18 @@ func Hello(name string) (string, error) {
 	}
 
 	// ':=' simultaneously declares and intializes a var
-	msg := fmt.Sprintf("Hi, %v. Welcome!", name)
+	msg := fmt.Sprintf(randomFormat(), name)
 	return msg, nil
+}
+
+func randomFormat() string {
+	// possible message formats
+	formats := []string{
+		"Hi, %v. Welcome!",
+		"Hoi %v hoe gaat het?",
+		"Bom dia %v, tudo bem?",
+	}
+
+	idx := rand.Intn(len(formats))
+	return formats[idx]
 }
