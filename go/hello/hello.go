@@ -21,6 +21,17 @@ func main() {
 	msg, err := greetings.Hello("jullie")
 	//fmt.Printf("msg: '%v', err: '%v'\n", msg, err)
 	fmt.Println(msg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	names := []string{"Alice", "Bob", "Charles"}
+
+	messages, err := greetings.Hellos(names)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(messages)
 
 	msg, err = greetings.Hello("")
 	fmt.Println(msg)
