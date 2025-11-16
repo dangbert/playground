@@ -26,8 +26,8 @@ def main():
         "-o",
         "--output",
         type=str,
-        help="path of output image",
-        default="text_out.jpg",
+        help="output directory or filename",
+        default="./text_out.jpg",
     )
     parser.add_argument(
         "-d",

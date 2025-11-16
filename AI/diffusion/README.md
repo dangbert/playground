@@ -7,8 +7,7 @@
 # setup
 pip install diffusers transformers accelerate --upgrade
 
-# usage
-./text_to_image.py "A skyscraper made of cheese" # --show
-# NOTE: write to out.jpg by default
+# usage (interactive prompt)
+./text_to_image.py
 ````
 
