@@ -10,6 +10,8 @@ from diffusers import AutoPipelineForImage2Image
 from diffusers.utils import load_image, make_image_grid
 import torch
 
+from text_to_image import MODEL_NAME
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -30,6 +32,13 @@ def main():
         type=str,
         help="path of input image",
         required=True,
+    )
+    parser.add_argument(
+        "-m",
+        "--model-name",
+        type=str,
+        help="name of model to run",
+        default=MODEL_NAME,
     )
     parser.add_argument(
         "-s",
@@ -77,7 +86,7 @@ def main():
     )
     pipeline = AutoPipelineForImage2Image.from_pipe(pipeline_text2image).to(args.device)
     dur_secs = timer() - start_time
-    print(f"model loaded in {dur_secs:.3f} seconds")
+    print(f"model loaded in {dur_secs:.3f} seconds: '{args.model_name}'")
 
     # init_image = load_image("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/cat.png")
     init_image = load_image(args.input)

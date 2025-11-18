@@ -11,6 +11,11 @@ import torch
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+MODEL_NAME = "stabilityai/sdxl-turbo"
+
+#MODEL_NAME = "Qwen/Qwen-Image"
+#MODEL_NAME = "Efficient-Large-Model/Sana_1600M_1024px_BF16_diffusers"
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate an image from a text prompt using the SDXL-Turbo model.",
@@ -35,6 +40,13 @@ def main():
         type=str,
         default=None,  # "cpu" | "cuda" | "mps"
         help="Manually specify device to run on (auto detects otherwise).",
+    )
+    parser.add_argument(
+        "-m",
+        "--model-name",
+        type=str,
+        help="name of model to run",
+        default=MODEL_NAME,
     )
     parser.add_argument(
         "-n",
@@ -76,12 +88,12 @@ def main():
     print(f"using device: '{args.device}'")
     torch_dtype = torch.float32 if args.device == "cpu" else torch.float16
     pipe = AutoPipelineForText2Image.from_pretrained(
-        "stabilityai/sdxl-turbo", torch_dtype=torch_dtype, variant="fp16"
+        args.model_name, torch_dtype=torch_dtype, variant="fp16"
     )
 
     pipe.to(args.device)
     dur_secs = timer() - start_time
-    print(f"model loaded in {dur_secs:.3f} seconds")
+    print(f"model loaded in {dur_secs:.3f} seconds: '{args.model_name}'")
 
     unique = 0
     while True:
