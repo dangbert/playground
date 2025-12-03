@@ -13,7 +13,7 @@ func main() {
 	fname := "input1.txt"
 	// fname := "example.txt"
 
-	// set true for partw
+	// set true for running day1 part 2
 	const method2 = true
 
 	fmt.Printf("reading '%v'\n", fname)
@@ -25,7 +25,6 @@ func main() {
 
 	const DIAL_POSITIONS = 100
 
-	// set true for running day1 part 1
 	var result int = 0
 	var state int = 50  // position of dial
 
@@ -52,7 +51,6 @@ func main() {
 			sign = -1
 		}
 
-		// adding DIAL_POSITIONS below as modulo can be negative in go!
 		nextState := positiveMod(state + sign * amount, DIAL_POSITIONS)
 
 		if (!method2) {
@@ -66,9 +64,6 @@ func main() {
 
 		prevResult := result
 		fullRotations := amount / DIAL_POSITIONS
-
-		// nextState := (state + sign * amount) % DIAL_POSITIONS
-		//fmt.Printf("state=%v, nextState=%v\n", state, nextState)
 
 		if (fullRotations > 0) {
 			result += fullRotations
@@ -89,8 +84,6 @@ func main() {
 
 		fmt.Printf("state=%v -> %v (result = %v -> %v)\n\n", state, nextState, prevResult, result)
 		state = nextState
-
-		//os.Exit(0)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -100,6 +93,7 @@ func main() {
 	fmt.Printf("\nfinal result = %v", result)
 }
 
+// get the remainder of a / b, always as a positive number
 // https://labex.io/tutorials/go-how-to-perform-modulo-operations-in-go-418324
 func positiveMod(a int, b int) int {
 	return ((a % b) + b) % b
