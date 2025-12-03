@@ -11,9 +11,10 @@ import (
 
 func main() {
 	fname := "input1.txt"
-	//fname := "example.txt"
+	// fname := "example.txt"
 
-	const method2 = false
+	// set true for partw
+	const method2 = true
 
 	fmt.Printf("reading '%v'\n", fname)
 	file, err := os.Open(fname)
@@ -52,7 +53,7 @@ func main() {
 		}
 
 		// adding DIAL_POSITIONS below as modulo can be negative in go!
-		nextState := (state + sign * amount + DIAL_POSITIONS) % DIAL_POSITIONS
+		nextState := positiveMod(state + sign * amount, DIAL_POSITIONS)
 
 		if (!method2) {
 			if (nextState == 0) {
@@ -71,41 +72,20 @@ func main() {
 
 		if (fullRotations > 0) {
 			result += fullRotations
+			// now we can consider the leftovers
+			amount -= fullRotations * DIAL_POSITIONS
+			fmt.Printf("fullRotations = %d\n", fullRotations)
 		}
 
-
-		// we passed 0 if we go into the negatives or >= DIAL_POSITIONS
-		remainder := state + sign * (amount % DIAL_POSITIONS)
-
-
-		// starting at 0 doesn't count as a click
-		if (state != 0 && (remainder <= 0 || remainder >= DIAL_POSITIONS)) {
-			result += 1
+		if (sign == 1) {
+			if ((state + amount) >= DIAL_POSITIONS && state != 0) {
+				result += 1
+			}
+		} else {
+			if ((state - amount) <= 0 && state != 0) {
+				result += 1 
+			}
 		}
-
-		// landing on 0 (avoiding double count from above)
-		/*
-		if (nextState == 0 && state != 0) {
-			result += 1
-			fmt.Println("flag2")
-			state = nextState
-			continue
-		}
-
-		if (sign == -1 && nextState > state) {
-			result += 1
-			fmt.Println("flag3")
-		} else if (sign == 1 && nextState < state) {
-			result += 1
-			fmt.Println("flag4")
-		}
-		*/
-
-		//else if ((nextState > 0) != (state > 0)) {
-		//	// signs differ so we passed 0
-		//	fmt.Println("flag3")
-		//	result += 1
-		//}
 
 		fmt.Printf("state=%v -> %v (result = %v -> %v)\n\n", state, nextState, prevResult, result)
 		state = nextState
@@ -118,4 +98,9 @@ func main() {
 	}
 
 	fmt.Printf("\nfinal result = %v", result)
+}
+
+// https://labex.io/tutorials/go-how-to-perform-modulo-operations-in-go-418324
+func positiveMod(a int, b int) int {
+	return ((a % b) + b) % b
 }
