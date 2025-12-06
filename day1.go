@@ -18,7 +18,7 @@ func main() {
 
 	fmt.Printf("reading '%v'\n", fname)
 	file, err := os.Open(fname)
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("failed to open '%v', %s", fname, err)
 	}
 	defer file.Close()
@@ -26,8 +26,7 @@ func main() {
 	const DIAL_POSITIONS = 100
 
 	var result int = 0
-	var state int = 50  // position of dial
-
+	var state int = 50 // position of dial
 
 	// iterate lines
 	scanner := bufio.NewScanner(file)
@@ -39,7 +38,7 @@ func main() {
 		direction := chars[0]
 		amount, err := strconv.Atoi(line[1:])
 
-		if (err != nil) {
+		if err != nil {
 			log.Fatalf("failed to parse line '%s'", line)
 		}
 
@@ -47,14 +46,14 @@ func main() {
 		// fmt.Printf("direction=%v, amount=%d\n", direction, amount)
 
 		sign := 1
-		if (direction == "L") {
+		if direction == "L" {
 			sign = -1
 		}
 
-		nextState := positiveMod(state + sign * amount, DIAL_POSITIONS)
+		nextState := positiveMod(state+sign*amount, DIAL_POSITIONS)
 
-		if (!method2) {
-			if (nextState == 0) {
+		if !method2 {
+			if nextState == 0 {
 				result += 1
 			}
 			state = nextState
@@ -65,20 +64,20 @@ func main() {
 		prevResult := result
 		fullRotations := amount / DIAL_POSITIONS
 
-		if (fullRotations > 0) {
+		if fullRotations > 0 {
 			result += fullRotations
 			// now we can consider the leftovers
 			amount -= fullRotations * DIAL_POSITIONS
 			fmt.Printf("fullRotations = %d\n", fullRotations)
 		}
 
-		if (sign == 1) {
-			if ((state + amount) >= DIAL_POSITIONS && state != 0) {
+		if sign == 1 {
+			if (state+amount) >= DIAL_POSITIONS && state != 0 {
 				result += 1
 			}
 		} else {
-			if ((state - amount) <= 0 && state != 0) {
-				result += 1 
+			if (state-amount) <= 0 && state != 0 {
+				result += 1
 			}
 		}
 
