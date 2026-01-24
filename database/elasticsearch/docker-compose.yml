@@ -18,9 +18,9 @@ services:
       discovery.type: single-node
       node.name: es01
       cluster.name: elasticsearch
-      #logger.level: WARN
       # for development, we don't need SSL
       xpack.security.enabled: false
+      logger.level: info
     volumes:
       - ./volumes/es01:/usr/share/elasticsearch/data
 
@@ -38,5 +38,25 @@ services:
       # by settings these here, we don't have to log into the Kibana UI:
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - LOGGING_ROOT_LEVEL=info
     depends_on:
       - es01
+
+  logstash:
+    image: logstash:${ES_VERSION}
+    container_name: logstash
+    depends_on:
+      - es01
+
+  # there are different "beats" available, here we setup filebeats
+  #   https://www.elastic.co/guide/en/beats
+  filebeat:
+    image: elastic/filebeat:${ES_VERSION}
+    container_name: filebeat
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+    depends_on:
+      - es01
+    volumes:
+      - ~/.aws:/root/.aws:ro
+    # command: 'bash -c "echo sleeping... && sleep infinity"'
