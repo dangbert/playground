@@ -1,0 +1,59 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+  # labels are like tags for grouping resources (e.g. from the CLI)
+  # "app" is a common label for defining the application name
+  labels:
+    app: mongo
+spec:
+  # 1 replica to avoid hairy shared state for the mongo DB
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+
+  template:
+    # this section configures a blueprint for a pod (within the deployment)
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongodb
+        # https://hub.docker.com/_/mongo/
+        image: mongo:8.2-noble
+        ports:
+        - containerPort: 27017
+        env:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: mongo-secret
+                key: mongo-user
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mongo-secret
+                key: mongo-password
+
+---
+# now we start the service definition
+# (it's common to group the deployment and service definitions together)
+# https://kubernetes.io/docs/concepts/services-networking/service/
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-service
+spec:
+  # we target the desired label of the pods to be connected to this service
+  selector:
+    app: mongo
+  ports:
+    - protocol: TCP
+      # whatever you want for the entry point of this service
+      port: 8080
+      # matched the container port
+      targetPort: 27017
+
