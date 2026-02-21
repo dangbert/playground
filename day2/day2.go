@@ -4,14 +4,18 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	fname := "input.txt"
-	fmt.Printf("reading '%v'\n", fname)
+	log.SetPrefix("[day2]: ")
+	log.SetFlags(0)
+
+	fname := "example.txt"
+	slog.Info(fmt.Sprintf("reading '%v'\n", fname))
 	file, err := os.Open(fname)
 	if err != nil {
 		log.Fatalf("failed to open '%v', %s", fname, err)
@@ -33,37 +37,40 @@ func main() {
 	// analyze ranges in file
 	var sum int = 0
 	var ranges []string = strings.Split(input, ",")
-	fmt.Printf("found %v ID ranges", len(ranges))
+	slog.Info(fmt.Sprintf("found %v ID ranges", len(ranges)))
 	for _, v := range strings.Split(input, ",") {
 		var r []string = strings.Split(v, "-")
-		if (len(r) != 2) {
+		if len(r) != 2 {
 			panic(fmt.Sprintf("expected split of length 2: %v", r))
 		}
 
 		var stop int
 		start, err := strconv.Atoi(r[0])
 		if err != nil {
-			panic(fmt.Sprintf("failed to parse int '%v', %v", start, err))
+			log.Fatal(fmt.Sprintf("failed to parse int '%v', %v", start, err))
 		}
 		stop, err = strconv.Atoi(r[0])
 		if err != nil {
-			panic(fmt.Sprintf("failed to parse int '%v', %v", start, err))
+			log.Fatal(fmt.Sprintf("failed to parse int '%v', %v", start, err))
 		}
 
-		invalids := findInvalids(start, stop) 
-		if len(invalids) > 0 {
-			fmt.Printf("\ninvalids: %v", invalids)
-			for _, invalidId := range invalids {
-				sum += invalidId
-			}
+		// sum results
+		invalids := findInvalids(start, stop)
+		if len(invalids) == 0 {
+			continue
+		}
+		slog.Info(fmt.Sprintf("invalids: %v", invalids))
+		for _, invalidId := range invalids {
+			sum += invalidId
 		}
 	}
 
-	fmt.Printf("\nfinal result = %v", sum)
+	slog.Info(fmt.Sprintf("final result = %v", sum))
 }
 
 // returns the "invalid" IDs in the given range (end inclusive).
 func findInvalids(start int, end int) []int {
+	slog.Debug(fmt.Sprintf("s\nearching range %v-%v", start, end))
 	var invalids = []int{} // slice
 	for i := start; i <= end; i++ {
 		if isInvalid(i) {
