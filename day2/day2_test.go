@@ -1,6 +1,7 @@
 package day2
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -25,5 +26,21 @@ func TestIsInvalid(t *testing.T) {
 	want = true
 	if res != want {
 		t.Errorf(`Got %v, expected %v for input %v`, res, want, input)
+	}
+}
+
+func TestFindInvalids(t *testing.T) {
+	res := findInvalids(95, 115)
+	want := []int{99}
+
+	if !reflect.DeepEqual(res, want) {
+		t.Errorf(`Got %c, expected %c`, res, want)
+	}
+
+	res = findInvalids(1698522, 1698528)
+	want = []int{}
+
+	if !reflect.DeepEqual(res, want) {
+		t.Errorf(`Got %v, expected %v`, res, want)
 	}
 }

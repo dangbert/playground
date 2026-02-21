@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	//"strings"
 )
 
 func main() {
@@ -33,9 +32,14 @@ func main() {
 }
 
 func findInvalids(start int, end int) []int {
-	//var invalids = []int{} // slice
+	var invalids = []int{} // slice
+	for i := start; i <= end; i++ {
+		if isInvalid(i) {
+			invalids = append(invalids, i)
+		}
+	}
 
-	return []int{0, 1}
+	return invalids
 }
 
 func isInvalid(num int) bool {
@@ -46,6 +50,4 @@ func isInvalid(num int) bool {
 	}
 
 	return digits[:(len(digits)/2)] == digits[(len(digits)/2):]
-
-	//for i := 0; i<len(digits); i++ {
 }
