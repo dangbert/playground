@@ -6,11 +6,11 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func main() {
 	fname := "input.txt"
-
 	fmt.Printf("reading '%v'\n", fname)
 	file, err := os.Open(fname)
 	if err != nil {
@@ -18,9 +18,9 @@ func main() {
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-
+	// parse file
 	var input string = ""
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		input = scanner.Text()
 		break
@@ -29,6 +29,37 @@ func main() {
 		log.Fatalf("error reading file: %s", err)
 	}
 	fmt.Println(input)
+
+	// analyze ranges in file
+	var sum int = 0
+	var ranges []string = strings.Split(input, ",")
+	fmt.Printf("found %v ID ranges", len(ranges))
+	for _, v := range strings.Split(input, ",") {
+		var r []string = strings.Split(v, "-")
+		if (len(r) != 2) {
+			panic(fmt.Sprintf("expected split of length 2: %v", r))
+		}
+
+		var stop int
+		start, err := strconv.Atoi(r[0])
+		if err != nil {
+			panic(fmt.Sprintf("failed to parse int '%v', %v", start, err))
+		}
+		stop, err = strconv.Atoi(r[0])
+		if err != nil {
+			panic(fmt.Sprintf("failed to parse int '%v', %v", start, err))
+		}
+
+		invalids := findInvalids(start, stop) 
+		if len(invalids) > 0 {
+			fmt.Printf("\ninvalids: %v", invalids)
+			for _, invalidId := range invalids {
+				sum += invalidId
+			}
+		}
+	}
+
+	fmt.Printf("\nfinal result = %v", sum)
 }
 
 // returns the "invalid" IDs in the given range (end inclusive).
