@@ -1,4 +1,4 @@
-package day2
+package main
 
 import (
 	"bufio"
@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	fname := "day2.txt"
+	fname := "input.txt"
 
 	fmt.Printf("reading '%v'\n", fname)
 	file, err := os.Open(fname)
@@ -31,6 +31,7 @@ func main() {
 	fmt.Println(input)
 }
 
+// returns the "invalid" IDs in the given range (end inclusive).
 func findInvalids(start int, end int) []int {
 	var invalids = []int{} // slice
 	for i := start; i <= end; i++ {
@@ -48,6 +49,5 @@ func isInvalid(num int) bool {
 	if len(digits)%2 == 1 {
 		return false // odd number of digits -> no possible duplication
 	}
-
 	return digits[:(len(digits)/2)] == digits[(len(digits)/2):]
 }
