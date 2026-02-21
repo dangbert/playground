@@ -14,7 +14,15 @@ func main() {
 	log.SetPrefix("[day2]: ")
 	log.SetFlags(0)
 
-	fname := "example.txt"
+	var logLevel = new(slog.LevelVar)
+	logLevel.Set(slog.LevelDebug)
+	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: logLevel,
+	})
+	slog.SetDefault(slog.New(handler))
+
+	//fname := "example.txt"
+	fname := "input.txt"
 	slog.Info(fmt.Sprintf("reading '%v'\n", fname))
 	file, err := os.Open(fname)
 	if err != nil {
@@ -38,6 +46,7 @@ func main() {
 	var sum int = 0
 	var ranges []string = strings.Split(input, ",")
 	slog.Info(fmt.Sprintf("found %v ID ranges", len(ranges)))
+	slog.Info(fmt.Sprintf("ranges = %v", ranges))
 	for _, v := range strings.Split(input, ",") {
 		var r []string = strings.Split(v, "-")
 		if len(r) != 2 {
@@ -49,7 +58,7 @@ func main() {
 		if err != nil {
 			log.Fatal(fmt.Sprintf("failed to parse int '%v', %v", start, err))
 		}
-		stop, err = strconv.Atoi(r[0])
+		stop, err = strconv.Atoi(r[1])
 		if err != nil {
 			log.Fatal(fmt.Sprintf("failed to parse int '%v', %v", start, err))
 		}
@@ -70,7 +79,7 @@ func main() {
 
 // returns the "invalid" IDs in the given range (end inclusive).
 func findInvalids(start int, end int) []int {
-	slog.Debug(fmt.Sprintf("s\nearching range %v-%v", start, end))
+	slog.Debug(fmt.Sprintf("searching range %v-%v", start, end))
 	var invalids = []int{} // slice
 	for i := start; i <= end; i++ {
 		if isInvalid(i) {
@@ -78,6 +87,7 @@ func findInvalids(start int, end int) []int {
 		}
 	}
 
+	slog.Debug(fmt.Sprintf("%v", invalids))
 	return invalids
 }
 
