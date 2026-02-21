@@ -1,12 +1,12 @@
-package main
+package day2
 
 import (
 	"bufio"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
-	"strings"
+	//"strconv"
+	//"strings"
 )
 
 func main() {
@@ -14,7 +14,7 @@ func main() {
 
 	fmt.Printf("reading '%v'\n", fname)
 	file, err := os.Open(fname)
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("failed to open '%v', %s", fname, err)
 	}
 	defer file.Close()
@@ -29,12 +29,16 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		log.Fatalf("error reading file: %s", err)
 	}
-
-
-
+	fmt.Println(input)
 }
 
 func findInvalids(start int, end int) []int {
-	var invalids []int = []
+	//var invalids = []int{} // slice
+
+	return []int{0, 1}
+}
+
+func isInvalid(num int) bool {
+	return true
 
 }
