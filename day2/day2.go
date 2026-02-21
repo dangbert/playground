@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	//"strconv"
+	"strconv"
 	//"strings"
 )
 
@@ -39,6 +39,13 @@ func findInvalids(start int, end int) []int {
 }
 
 func isInvalid(num int) bool {
-	return true
+	var digits = strconv.FormatInt(int64(num), 10)
 
+	if len(digits)%2 == 1 {
+		return false // odd number of digits -> no possible duplication
+	}
+
+	return digits[:(len(digits)/2)] == digits[(len(digits)/2):]
+
+	//for i := 0; i<len(digits); i++ {
 }
