@@ -53,13 +53,14 @@ func main() {
 
 	// https://medium.com/hprog99/concurrency-in-go-a-deep-dive-2abbb4838984
 
-	// channel for storing tasks (to be updated in place with results)
-	tasks := make(chan payload, *endPtr-*startPtr+1)
+	// channel for storing tasks
+	tasks := make(chan payload, *endPtr-*startPtr+1) // TODO: can simplify to chan str
+	results := make(chan payload, *endPtr-*startPtr+1)
 	// create desired workforce
 	var wg sync.WaitGroup
 	for j := 0; j < *jPtr; j++ {
 		wg.Add(1)
-		go worker(j, tasks, &wg)
+		go worker(j, tasks, results, &wg)
 	}
 
 	// send tasks
@@ -67,24 +68,26 @@ func main() {
 		url := *baseUrlPtr + strconv.Itoa(curNum)
 		tasks <- payload{url: url}
 	}
+	close(tasks) // make it clear no more tasks are coming
 
 	fmt.Printf("awaiting results...\n")
 	wg.Wait()
-	close(tasks)
+	close(results) // note this and the line above would need to be in a go routine if results was not pre-sized
 
 	fmt.Printf("\nresults:\n")
-	for t := range tasks {
-		fmt.Printf("%v\n", t)
+	for x := range results {
+		fmt.Printf("%v\n", x)
 	}
 }
 
-// scrape a set of pages?
-// results are sent back into the channel (annotated as bidirectional here)
-func worker(id int, item chan payload, wg *sync.WaitGroup) {
+// scrape a set of assigned urls
+func worker(id int, tasks chan payload, results chan payload, wg *sync.WaitGroup) {
 	defer wg.Done()
-	url := (<-item).url
-	fmt.Printf("worker %d at %v\n", id, url)
-	item <- scrapePage(url) // update Payload in place with result
+	for item := range tasks {
+		url := item.url
+		fmt.Printf("worker %d at %v\n", id, url)
+		results <- scrapePage(url)
+	}
 }
 
 func scrapePage(url string) payload {
