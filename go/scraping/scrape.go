@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type payload struct {
@@ -27,6 +28,7 @@ func main() {
 	baseUrlPtr := flag.String("baseUrl", "", "url to scrape")
 	startPtr := flag.Int("start", 1, "start num to append to url")
 	endPtr := flag.Int("end", -1, "final num to append to url (incremented sequentially)")
+	//sleepPtr := flag.Float("end", 0.25, "time to sleep between scrapes")
 	jPtr := flag.Int("j", 4, "max concurrent threads")
 	flag.Parse()
 
@@ -48,9 +50,9 @@ func main() {
 	if !strings.HasPrefix(*baseUrlPtr, "http") {
 		*baseUrlPtr = "https://" + *baseUrlPtr
 	}
-	if !strings.HasSuffix(*baseUrlPtr, "/") {
-		*baseUrlPtr = *baseUrlPtr + "/"
-	}
+	//if !strings.HasSuffix(*baseUrlPtr, "/") {
+	//	*baseUrlPtr = *baseUrlPtr + "/"
+	//}
 
 	fmt.Printf("scraping '%v%v' -> '%v%v' (%v threads)\n", *baseUrlPtr, *startPtr, *baseUrlPtr, *endPtr, *jPtr)
 
@@ -104,13 +106,16 @@ func scrapePage(url string) payload {
 	}
 
 	res, err := http.Get(url)
+	time.Sleep(250 * time.Millisecond)
 	if err != nil {
+		fmt.Printf("error1: %s\n", err)
 		return bad
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
+		fmt.Printf("error2: %s\n", err)
 		return bad
 	}
 	re := regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
