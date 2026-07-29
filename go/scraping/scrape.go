@@ -27,6 +27,7 @@ func main() {
 	jPtr := flag.Int("j", 4, "max concurrent threads")
 	flag.Parse()
 
+	// parse args
 	if *baseUrlPtr == "" {
 		fmt.Printf("missing arg: -baseUrl=example.com")
 		os.Exit(1)
@@ -48,12 +49,12 @@ func main() {
 		*baseUrlPtr = *baseUrlPtr + "/"
 	}
 
-	fmt.Printf("scraping '%v%v' -> '%v%v' (%v threads)\n", *baseUrlPtr, *startPtr, *baseUrlPtr, *startPtr, *jPtr)
+	fmt.Printf("scraping '%v%v' -> '%v%v' (%v threads)\n", *baseUrlPtr, *startPtr, *baseUrlPtr, *endPtr, *jPtr)
 
 	// https://medium.com/hprog99/concurrency-in-go-a-deep-dive-2abbb4838984
-	tasks := make(chan payload)
-	//results := make(chan payload) // can tasks be re-used for this?
 
+	// channel for storing tasks (to be updated in place with results)
+	tasks := make(chan payload, *endPtr-*startPtr+1)
 	// create desired workforce
 	var wg sync.WaitGroup
 	for j := 0; j < *jPtr; j++ {
@@ -69,20 +70,25 @@ func main() {
 
 	fmt.Printf("awaiting results...\n")
 	wg.Wait()
-	close(tasks) // when to call this?
+	close(tasks)
 
+	fmt.Printf("\nresults:\n")
+	for t := range tasks {
+		fmt.Printf("%v\n", t)
+	}
 }
 
-// scrape a single page
+// scrape a set of pages?
 // results are sent back into the channel (annotated as bidirectional here)
 func worker(id int, item chan payload, wg *sync.WaitGroup) {
 	defer wg.Done()
-	fmt.Printf("worker %d at %v\n", id, (<-item).url)
-	item <- scrapePage((<-item).url) // update Payload in place with result
+	url := (<-item).url
+	fmt.Printf("worker %d at %v\n", id, url)
+	item <- scrapePage(url) // update Payload in place with result
 }
 
 func scrapePage(url string) payload {
-	fmt.Printf("\tscraping '%v'", url)
+	fmt.Printf("\tscraping '%v'\n", url)
 
 	return payload{
 		url:      url,
