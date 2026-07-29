@@ -9,8 +9,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync/atomic"
+	"sync"
 )
+
+type payload struct {
+	url      string
+	finalUrl string // after possible redirection
+
+	title    string
+	httpCode int
+}
 
 func main() {
 	baseUrlPtr := flag.String("baseUrl", "", "url to scrape")
@@ -42,16 +50,44 @@ func main() {
 
 	fmt.Printf("scraping '%v%v' -> '%v%v' (%v threads)\n", *baseUrlPtr, *startPtr, *baseUrlPtr, *startPtr, *jPtr)
 
-	var nextNum uint64 = uint64(*startPtr) // next number to use for scraping
-	// results := make(chan string)
-	go func() {
-		// construct url for this job
-		assignedNum := atomic.LoadUint64(&nextNum)
-		atomic.AddUint64(&nextNum, 1)
-		url := *baseUrlPtr + strconv.Itoa(int(assignedNum))
+	// https://medium.com/hprog99/concurrency-in-go-a-deep-dive-2abbb4838984
+	tasks := make(chan payload)
+	//results := make(chan payload) // can tasks be re-used for this?
 
-		fmt.Printf("at '%v'", url)
-	}()
+	// create desired workforce
+	var wg sync.WaitGroup
+	for j := 0; j < *jPtr; j++ {
+		wg.Add(1)
+		go worker(j, tasks, &wg)
+	}
 
-	fmt.Printf("nextNum='%v'", nextNum)
+	// send tasks
+	for curNum := *startPtr; curNum <= *endPtr; curNum++ {
+		url := *baseUrlPtr + strconv.Itoa(curNum)
+		tasks <- payload{url: url}
+	}
+
+	fmt.Printf("awaiting results...\n")
+	wg.Wait()
+	close(tasks) // when to call this?
+
+}
+
+// scrape a single page
+// results are sent back into the channel (annotated as bidirectional here)
+func worker(id int, item chan payload, wg *sync.WaitGroup) {
+	defer wg.Done()
+	fmt.Printf("worker %d at %v\n", id, (<-item).url)
+	item <- scrapePage((<-item).url) // update Payload in place with result
+}
+
+func scrapePage(url string) payload {
+	fmt.Printf("\tscraping '%v'", url)
+
+	return payload{
+		url:      url,
+		finalUrl: url,
+		title:    "dummy result",
+		httpCode: -1,
+	}
 }
