@@ -6,7 +6,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -93,10 +96,34 @@ func worker(id int, tasks chan payload, results chan payload, wg *sync.WaitGroup
 func scrapePage(url string) payload {
 	fmt.Printf("\tscraping '%v'\n", url)
 
-	return payload{
+	bad := payload{
 		url:      url,
 		finalUrl: url,
-		title:    "dummy result",
+		title:    "",
 		httpCode: -1,
+	}
+
+	res, err := http.Get(url)
+	if err != nil {
+		return bad
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return bad
+	}
+	re := regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
+	match := re.FindStringSubmatch(string(body))
+	title := ""
+	if len(match) > 1 {
+		title = strings.TrimSpace(match[1])
+	}
+
+	return payload{
+		url:      url,
+		finalUrl: res.Request.URL.String(),
+		title:    title,
+		httpCode: res.StatusCode,
 	}
 }
