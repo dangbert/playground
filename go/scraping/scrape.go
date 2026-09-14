@@ -24,12 +24,33 @@ type payload struct {
 	httpCode int
 }
 
+var (
+	lastScrapeMu sync.Mutex
+	lastScrape   time.Time
+)
+
+func rateLimit(rpm int) {
+	interval := time.Duration(float64(time.Minute) / float64(rpm))
+	lastScrapeMu.Lock()
+	defer lastScrapeMu.Unlock()
+
+	now := time.Now()
+	elapsed := now.Sub(lastScrape)
+	if elapsed < interval {
+		time.Sleep(interval - elapsed)
+		lastScrape = time.Now()
+	} else {
+		lastScrape = time.Now()
+	}
+}
+
 func main() {
 	baseUrlPtr := flag.String("baseUrl", "", "url to scrape")
 	startPtr := flag.Int("start", 1, "start num to append to url")
 	endPtr := flag.Int("end", -1, "final num to append to url (incremented sequentially)")
 	//sleepPtr := flag.Float("end", 0.25, "time to sleep between scrapes")
 	jPtr := flag.Int("j", 4, "max concurrent threads")
+	rpmPtr := flag.Int("rpm", 120, "requests per minute")
 	flag.Parse()
 
 	// parse args
@@ -54,7 +75,7 @@ func main() {
 	//	*baseUrlPtr = *baseUrlPtr + "/"
 	//}
 
-	fmt.Printf("scraping '%v%v' -> '%v%v' (%v threads)\n", *baseUrlPtr, *startPtr, *baseUrlPtr, *endPtr, *jPtr)
+	//fmt.Printf("scraping '%v%v' -> '%v%v' (%v threads)\n", *baseUrlPtr, *startPtr, *baseUrlPtr, *endPtr, *jPtr)
 
 	// https://medium.com/hprog99/concurrency-in-go-a-deep-dive-2abbb4838984
 
@@ -65,7 +86,7 @@ func main() {
 	var wg sync.WaitGroup
 	for j := 0; j < *jPtr; j++ {
 		wg.Add(1)
-		go worker(j, tasks, results, &wg)
+		go worker(j, tasks, results, &wg, *rpmPtr)
 	}
 
 	// send tasks
@@ -86,17 +107,17 @@ func main() {
 }
 
 // scrape a set of assigned urls
-func worker(id int, tasks chan payload, results chan payload, wg *sync.WaitGroup) {
+func worker(id int, tasks chan payload, results chan payload, wg *sync.WaitGroup, rpm int) {
 	defer wg.Done()
 	for item := range tasks {
 		url := item.url
 		fmt.Printf("worker %d at %v\n", id, url)
-		results <- scrapePage(url)
+		results <- scrapePage(url, rpm)
 	}
 }
 
-func scrapePage(url string) payload {
-	fmt.Printf("\tscraping '%v'\n", url)
+func scrapePage(url string, rpm int) payload {
+	//fmt.Printf("\tscraping '%v'\n", url)
 
 	bad := payload{
 		url:      url,
@@ -105,8 +126,11 @@ func scrapePage(url string) payload {
 		httpCode: -1,
 	}
 
+	rateLimit(rpm)
+
 	res, err := http.Get(url)
 	time.Sleep(250 * time.Millisecond)
+
 	if err != nil {
 		fmt.Printf("error1: %s\n", err)
 		return bad
