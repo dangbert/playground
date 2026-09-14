@@ -80,8 +80,8 @@ func main() {
 	// https://medium.com/hprog99/concurrency-in-go-a-deep-dive-2abbb4838984
 
 	// channel for storing tasks
-	tasks := make(chan payload, *endPtr-*startPtr+1) // TODO: can simplify to chan str
-	results := make(chan payload, *endPtr-*startPtr+1)
+	tasks := make(chan payload, *jPtr)
+	results := make(chan payload, *jPtr)
 	// create desired workforce
 	var wg sync.WaitGroup
 	for j := 0; j < *jPtr; j++ {
@@ -89,18 +89,22 @@ func main() {
 		go worker(j, tasks, results, &wg, *rpmPtr)
 	}
 
-	// send tasks
-	for curNum := *startPtr; curNum <= *endPtr; curNum++ {
-		url := *baseUrlPtr + strconv.Itoa(curNum)
-		tasks <- payload{url: url}
-	}
-	close(tasks) // make it clear no more tasks are coming
+	// send tasks in a goroutine so we can start processing results immediately
+	go func() {
+		for curNum := *startPtr; curNum <= *endPtr; curNum++ {
+			url := *baseUrlPtr + strconv.Itoa(curNum)
+			tasks <- payload{url: url}
+		}
+		close(tasks)
+	}()
+
+	// Close results channel when all workers are done
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
 	fmt.Printf("awaiting results...\n")
-	wg.Wait()
-	close(results) // note this and the line above would need to be in a go routine if results was not pre-sized
-
-	fmt.Printf("\nresults:\n")
 	for x := range results {
 		fmt.Printf("%v\n", x)
 	}
