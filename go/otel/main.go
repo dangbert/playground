@@ -74,7 +74,9 @@ func newHTTPHandler() http.Handler {
 	mux.HandleFunc("/rolldice/", rolldice)
 	mux.HandleFunc("/rolldice/{player}", rolldice)
 
-	// add http instrumentation
+	// enable automatic instrumentation
+	//   emits automatic http telemetry https://opentelemetry.io/docs/specs/semconv/http/http-spans/#http-client-server-example
+	//   starts server span, propogates possible existing trace from caller (headers)
 	handler := otelhttp.NewHandler(mux, "/")
 	return handler
 }

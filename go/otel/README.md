@@ -2,9 +2,10 @@
 
 * https://opentelemetry.io/docs/languages/go/getting-started/
 
-
 ````bash
 go mod tidy
+
+# https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration
 export OTEL_RESOURCE_ATTRIBUTES="service.name=dice,service.version=0.1.0"
 make run
 

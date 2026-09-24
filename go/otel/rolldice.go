@@ -15,6 +15,7 @@ import (
 )
 
 const name = "go.opentelemetry.io/contrib/examples/dice"
+const enabled = true // toggle to distinguiosh automatical telemetry from custrom
 
 var (
 	tracer    = otel.Tracer(name)
@@ -35,10 +36,8 @@ func init() {
 	}
 }
 
+// example function to do some logged work
 func rolldice(w http.ResponseWriter, r *http.Request) {
-	ctx, span := tracer.Start(r.Context(), "roll")
-	defer span.End()
-
 	var msg string
 	player := r.PathValue("player")
 
@@ -49,11 +48,20 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	roll := 1 + rand.Intn(6) // rand int in range [1,6]
-	logger.InfoContext(ctx, msg, "result", roll)
 
-	rollValueAttr := attribute.Int("roll.value", roll)
-	span.SetAttributes(rollValueAttr)
-	rollCount.Add(ctx, 1, metric.WithAttributes(rollValueAttr))
+	if enabled {
+		// register a span
+		ctx, span := tracer.Start(r.Context(), "roll")
+		defer span.End() // indicate Span has completed
+
+		logger.InfoContext(ctx, msg, "result", roll)
+		rollValueAttr := attribute.Int("roll.value", roll)
+		span.SetAttributes(rollValueAttr)
+		// increment count of this particular dice result (e.g. we've rolled 3 ten times so far)
+		rollCount.Add(ctx, 1, metric.WithAttributes(rollValueAttr))
+	} else {
+		log.Println(msg)
+	}
 
 	resp := strconv.Itoa(roll) + "\n"
 	if _, err := io.WriteString(w, resp); err != nil {

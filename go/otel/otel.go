@@ -98,10 +98,11 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 		return nil, err
 	}
 
+	// regularly export regisered metrics
 	meterProvider := metric.NewMeterProvider(
 		metric.WithReader(metric.NewPeriodicReader(metricExporter,
-			// Default is 1m. Set to 3s for demonstrative purposes.
-			metric.WithInterval(3*time.Second))),
+			// Default is 1m.
+			metric.WithInterval(15*time.Second))),
 	)
 	return meterProvider, nil
 }
