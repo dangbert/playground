@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -11,19 +12,19 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/log"
+	olog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 // bootstrap OpenTelemetry pipeline
-func setupOtel(ctx context.Context) (func(context.Context) error, error) {
+func setupOtelSDK(ctx context.Context) (func(context.Context) error, error) {
 	var shutdownFuncs []func(context.Context) error
 	var err error
 
 	// caller of all registered cleanup funcs
-
 	shutdown := func(ctx context.Context) error {
+		log.Printf("Shutting down otel")
 		var err error
 		for _, fn := range shutdownFuncs {
 			err = errors.Join(err, fn(ctx))
@@ -36,11 +37,11 @@ func setupOtel(ctx context.Context) (func(context.Context) error, error) {
 		err = errors.Join(inErr, shutdown(ctx))
 	}
 
-	// Set up propagator.
+	// propagator
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
-	// Set up trace provider.
+	// tracer
 	tracerProvider, err := newTracerProvider()
 	if err != nil {
 		handleErr(err)
@@ -49,7 +50,7 @@ func setupOtel(ctx context.Context) (func(context.Context) error, error) {
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
 
-	// Set up meter provider.
+	// meter
 	meterProvider, err := newMeterProvider()
 	if err != nil {
 		handleErr(err)
@@ -58,7 +59,7 @@ func setupOtel(ctx context.Context) (func(context.Context) error, error) {
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
 	otel.SetMeterProvider(meterProvider)
 
-	// Set up logger provider.
+	// logger provider
 	loggerProvider, err := newLoggerProvider()
 	if err != nil {
 		handleErr(err)
@@ -105,14 +106,14 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 	return meterProvider, nil
 }
 
-func newLoggerProvider() (*log.LoggerProvider, error) {
+func newLoggerProvider() (*olog.LoggerProvider, error) {
 	logExporter, err := stdoutlog.New(stdoutlog.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
 
-	loggerProvider := log.NewLoggerProvider(
-		log.WithProcessor(log.NewBatchProcessor(logExporter)),
+	loggerProvider := olog.NewLoggerProvider(
+		olog.WithProcessor(olog.NewBatchProcessor(logExporter)),
 	)
 	return loggerProvider, nil
 }

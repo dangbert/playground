@@ -5,8 +5,13 @@
 
 ````bash
 go mod tidy
+export OTEL_RESOURCE_ATTRIBUTES="service.name=dice,service.version=0.1.0"
 make run
 
 curl http://localhost:8080/rolldice
 curl http://localhost:8080/rolldice/dan
 ````
+
+
+see also:
+* https://opentelemetry.io/docs/demo/ (more extensive demo)

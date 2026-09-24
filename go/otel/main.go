@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -9,18 +10,32 @@ import (
 	"os/signal"
 	"strconv"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func main() {
+	log.Printf("peparing to run()")
 	if err := run(); err != nil {
 		log.Fatalln(err)
 	}
 }
 
 func run() (err error) {
-	// Handle SIGINT (CTRL+C) gracefully.
+	// gracefully handle SIGINT
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
+
+	// setup OpenTelemetry
+	otelShutdown, err := setupOtelSDK(ctx)
+	if err != nil {
+		return err
+	}
+	// proper shutdown
+	defer func() {
+		log.Printf("ready to shutdown")
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
 
 	port := 8080
 	srv := &http.Server{
@@ -59,5 +74,7 @@ func newHTTPHandler() http.Handler {
 	mux.HandleFunc("/rolldice/", rolldice)
 	mux.HandleFunc("/rolldice/{player}", rolldice)
 
-	return mux
+	// add http instrumentation
+	handler := otelhttp.NewHandler(mux, "/")
+	return handler
 }
