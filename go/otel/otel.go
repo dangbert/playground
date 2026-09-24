@@ -1,9 +1,14 @@
+// https://opentelemetry.io/docs/languages/go/instrumentation/
+
 package main
 
 import (
 	"context"
 	"errors"
+	"io"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -17,10 +22,19 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
+// where to write telemetry. set to "" to use stdout instead
+const outputDir = "./output"
+
 // bootstrap OpenTelemetry pipeline
 func setupOtelSDK(ctx context.Context) (func(context.Context) error, error) {
 	var shutdownFuncs []func(context.Context) error
 	var err error
+
+	if outputDir != "" {
+		if err = os.MkdirAll(outputDir, 0755); err != nil {
+			return nil, err
+		}
+	}
 
 	// caller of all registered cleanup funcs
 	shutdown := func(ctx context.Context) error {
@@ -42,33 +56,66 @@ func setupOtelSDK(ctx context.Context) (func(context.Context) error, error) {
 	otel.SetTextMapPropagator(prop)
 
 	// tracer
-	tracerProvider, err := newTracerProvider()
+	tracerProvider, fns, err := newSignal("traces.json", newTracerProvider)
 	if err != nil {
 		handleErr(err)
 		return shutdown, err
 	}
-	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
+	shutdownFuncs = append(shutdownFuncs, fns...)
 	otel.SetTracerProvider(tracerProvider)
 
 	// meter
-	meterProvider, err := newMeterProvider()
+	meterProvider, fns, err := newSignal("metrics.json", newMeterProvider)
 	if err != nil {
 		handleErr(err)
 		return shutdown, err
 	}
-	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+	shutdownFuncs = append(shutdownFuncs, fns...)
 	otel.SetMeterProvider(meterProvider)
 
 	// logger provider
-	loggerProvider, err := newLoggerProvider()
+	loggerProvider, fns, err := newSignal("logs.json", newLoggerProvider)
 	if err != nil {
 		handleErr(err)
 		return shutdown, err
 	}
-	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
+	shutdownFuncs = append(shutdownFuncs, fns...)
 	global.SetLoggerProvider(loggerProvider)
 
 	return shutdown, err
+}
+
+type provider interface {
+	Shutdown(context.Context) error
+}
+
+// pairs a provider with the sink it writes to, returning cleanups ordered so
+// the provider flushes before the sink closes
+func newSignal[P provider](name string, newProvider func(io.Writer) (P, error)) (P, []func(context.Context) error, error) {
+	var zero P
+
+	if outputDir == "" {
+		p, err := newProvider(os.Stdout)
+		if err != nil {
+			return zero, nil, err
+		}
+		return p, []func(context.Context) error{p.Shutdown}, nil
+	}
+
+	f, err := os.OpenFile(filepath.Join(outputDir, name), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return zero, nil, err
+	}
+
+	p, err := newProvider(f)
+	if err != nil {
+		return zero, nil, errors.Join(err, f.Close())
+	}
+
+	return p, []func(context.Context) error{
+		p.Shutdown,
+		func(context.Context) error { return f.Close() },
+	}, nil
 }
 
 func newPropagator() propagation.TextMapPropagator {
@@ -78,8 +125,10 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newTracerProvider() (*trace.TracerProvider, error) {
-	traceExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+func newTracerProvider(w io.Writer) (*trace.TracerProvider, error) {
+	traceExporter, err := stdouttrace.New(
+		stdouttrace.WithWriter(w),
+		stdouttrace.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +141,10 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 	return tracerProvider, nil
 }
 
-func newMeterProvider() (*metric.MeterProvider, error) {
-	metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
+func newMeterProvider(w io.Writer) (*metric.MeterProvider, error) {
+	metricExporter, err := stdoutmetric.New(
+		stdoutmetric.WithWriter(w),
+		stdoutmetric.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +158,10 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 	return meterProvider, nil
 }
 
-func newLoggerProvider() (*olog.LoggerProvider, error) {
-	logExporter, err := stdoutlog.New(stdoutlog.WithPrettyPrint())
+func newLoggerProvider(w io.Writer) (*olog.LoggerProvider, error) {
+	logExporter, err := stdoutlog.New(
+		stdoutlog.WithWriter(w),
+		stdoutlog.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}

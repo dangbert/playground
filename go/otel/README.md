@@ -7,6 +7,7 @@ go mod tidy
 
 # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration
 export OTEL_RESOURCE_ATTRIBUTES="service.name=dice,service.version=0.1.0"
+#rm -rf output/ # optionally wipe
 make run
 
 curl http://localhost:8080/rolldice
