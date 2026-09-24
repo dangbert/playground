@@ -16,4 +16,5 @@ curl http://localhost:8080/rolldice/dan
 
 
 see also:
+* [./example_output/](./example_output/)
 * https://opentelemetry.io/docs/demo/ (more extensive demo)

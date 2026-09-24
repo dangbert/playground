@@ -89,13 +89,25 @@ type provider interface {
 	Shutdown(context.Context) error
 }
 
+// inject blank lines between records for readability
+type spaced struct{ io.Writer }
+
+func (s spaced) Write(p []byte) (int, error) {
+	n, err := s.Writer.Write(p)
+	if err != nil {
+		return n, err
+	}
+	_, err = s.Writer.Write([]byte("\n\n"))
+	return n, err
+}
+
 // pairs a provider with the sink it writes to, returning cleanups ordered so
 // the provider flushes before the sink closes
 func newSignal[P provider](name string, newProvider func(io.Writer) (P, error)) (P, []func(context.Context) error, error) {
 	var zero P
 
 	if outputDir == "" {
-		p, err := newProvider(os.Stdout)
+		p, err := newProvider(spaced{os.Stdout})
 		if err != nil {
 			return zero, nil, err
 		}
@@ -107,7 +119,7 @@ func newSignal[P provider](name string, newProvider func(io.Writer) (P, error)) 
 		return zero, nil, err
 	}
 
-	p, err := newProvider(f)
+	p, err := newProvider(spaced{f})
 	if err != nil {
 		return zero, nil, errors.Join(err, f.Close())
 	}

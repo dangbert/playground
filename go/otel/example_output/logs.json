@@ -1,0 +1,136 @@
+{
+	"Timestamp": "2026-09-24T11:55:03.127494317+01:00",
+	"ObservedTimestamp": "2026-09-24T11:55:03.127555275+01:00",
+	"Severity": 9,
+	"SeverityText": "INFO",
+	"Body": {
+		"Type": "STRING",
+		"Value": "anon player rolling the dice"
+	},
+	"Attributes": [
+		{
+			"Key": "result",
+			"Value": {
+				"Type": "INT64",
+				"Value": 6
+			}
+		}
+	],
+	"TraceID": "3943a4fb88c5c055013c066cfcdfa8d0",
+	"SpanID": "5555ff17dfebd1ec",
+	"TraceFlags": "01",
+	"Resource": [
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "dicer"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "0.1.0"
+			}
+		},
+		{
+			"Key": "telemetry.sdk.language",
+			"Value": {
+				"Type": "STRING",
+				"Value": "go"
+			}
+		},
+		{
+			"Key": "telemetry.sdk.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "opentelemetry"
+			}
+		},
+		{
+			"Key": "telemetry.sdk.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.46.0"
+			}
+		}
+	],
+	"Scope": {
+		"Name": "go.opentelemetry.io/contrib/examples/dice",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": {}
+	},
+	"DroppedAttributes": 0
+}
+
+
+{
+	"Timestamp": "2026-09-24T12:46:27.589660679+01:00",
+	"ObservedTimestamp": "2026-09-24T12:46:27.589673346+01:00",
+	"Severity": 9,
+	"SeverityText": "INFO",
+	"Body": {
+		"Type": "STRING",
+		"Value": "dan rolling the dice"
+	},
+	"Attributes": [
+		{
+			"Key": "result",
+			"Value": {
+				"Type": "INT64",
+				"Value": 3
+			}
+		}
+	],
+	"TraceID": "92d6646b52eb28f6cc1dcdd1820b3314",
+	"SpanID": "c1ba5f347f7ff080",
+	"TraceFlags": "01",
+	"Resource": [
+		{
+			"Key": "service.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "dicer"
+			}
+		},
+		{
+			"Key": "service.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "0.1.0"
+			}
+		},
+		{
+			"Key": "telemetry.sdk.language",
+			"Value": {
+				"Type": "STRING",
+				"Value": "go"
+			}
+		},
+		{
+			"Key": "telemetry.sdk.name",
+			"Value": {
+				"Type": "STRING",
+				"Value": "opentelemetry"
+			}
+		},
+		{
+			"Key": "telemetry.sdk.version",
+			"Value": {
+				"Type": "STRING",
+				"Value": "1.46.0"
+			}
+		}
+	],
+	"Scope": {
+		"Name": "go.opentelemetry.io/contrib/examples/dice",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": {}
+	},
+	"DroppedAttributes": 0
+}
+
+
