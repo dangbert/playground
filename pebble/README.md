@@ -20,3 +20,6 @@ cd my-app
 pebble build
 pebble install ./build/first-app.pbw --emulator emery
 ````
+
+references:
+* https://developer.repebble.com/tutorials/watchface-tutorial/part1/
