@@ -1,0 +1,22 @@
+services:
+  # AWS S3-compatible object storage (SeaweedFS)
+  bucket-aws:
+    # https://hub.docker.com/r/chrislusf/seaweedfs/tags
+    image: "docker.io/chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d"
+    container_name: seaweed
+    entrypoint: ["/bin/sh", "/project/entrypoint.sh"]
+    environment:
+      # buckets to create on boot (space delimited)
+      BUCKETS: "playground"
+    ports:
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - ./etc/seaweed-entrypoint.sh:/project/entrypoint.sh:ro,z
+      - ./etc/seaweed-credentials.json:/project/credentials.json:ro,z
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/buckets.ready"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
